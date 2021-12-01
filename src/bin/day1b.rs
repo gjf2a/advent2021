@@ -13,7 +13,6 @@ fn main() -> io::Result<()> {
         if window_total(&depths, i, window_width) < window_total(&depths, i + 1, window_width) {
             count += 1;
         }
-        println!("depths[{}]: {} count: {}", i, depths[i], count);
     }
     println!("{}", count);
     Ok(())
