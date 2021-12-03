@@ -1,6 +1,7 @@
 use std::{env, io};
 use advent_code_lib::all_lines;
 use bits::BitArray;
+use num::BigUint;
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -49,9 +50,9 @@ fn filter_using(least_common: bool, binary_nums: &Vec<BitArray>) -> BitArray {
 }
 
 fn show_results(num1: &BitArray, num1name: &str, num2: &BitArray, num2name: &str) -> io::Result<()> {
-    let mut product = 1;
+    let mut product = BigUint::from(1 as usize);
     for (num, name) in [(num1, num1name), (num2, num2name)] {
-        let rate = u64::try_from(num)?;
+        let rate = BigUint::from(num);
         println!("{}: {} ({})", name, num, rate);
         product *= rate;
     }
