@@ -17,13 +17,12 @@ impl Submarine {
     }
 
     pub fn update_1(&mut self, command: &str, distance: isize) {
-        let offset = match command {
+        self.pos += match command {
             "forward" => Position::from((distance, 0)),
             "down" => Position::from((0, distance)),
             "up" => Position::from((0, -distance)),
             other => panic!("Illegible input: {}", other)
         };
-        self.pos += offset;
     }
 
     pub fn update_2(&mut self, command: &str, distance: isize) {
