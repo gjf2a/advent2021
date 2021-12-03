@@ -15,7 +15,7 @@ fn main() -> io::Result<()> {
 }
 
 fn part1(binary_nums: &Vec<BitArray>) -> io::Result<()> {
-    let gamma= find_gamma(binary_nums);
+    let gamma = find_gamma(binary_nums);
     show_results(&gamma, "gamma", &!&gamma, "epsilon")
 }
 
