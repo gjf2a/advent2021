@@ -42,7 +42,7 @@ fn filter_using(least_common: bool, binary_nums: &Vec<BitArray>) -> BitArray {
     let mut index = binary_nums[0].len();
     while binary_nums.len() > 1 {
         index -= 1;
-        let target = one_most_common_at(index, &binary_nums) ^ least_common;
+        let target = one_most_common_at(index, &binary_nums) != least_common;
         binary_nums.retain(|b| b.is_set(index) == target);
     }
     binary_nums[0].clone()
