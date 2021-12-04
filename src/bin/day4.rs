@@ -10,15 +10,9 @@ fn main() -> io::Result<()> {
         Ok(())
     } else {
         let mut game = BingoGame::from_file(args[1].as_str())?;
-        loop {
-            if let Some(score) = game.next_round_score() {
-                println!("part 1 score: {}", score);
-                if game.num_boards() == 1 {
-                    println!("part 2 score: {}", score);
-                    return Ok(())
-                }
-            }
-        }
+        println!("Part 1 score: {}", game.next().unwrap());
+        println!("Part 2 score: {}", game.last().unwrap());
+        Ok(())
     }
 }
 
@@ -55,6 +49,22 @@ impl BingoGame {
 
     pub fn num_boards(&self) -> usize {
         self.boards.len()
+    }
+}
+
+impl Iterator for BingoGame {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.num_boards() == 1 {
+            None
+        } else {
+            loop {
+                if let Some(score) = self.next_round_score() {
+                    return Some(score);
+                }
+            }
+        }
     }
 }
 
