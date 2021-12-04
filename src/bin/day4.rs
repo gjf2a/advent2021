@@ -1,7 +1,7 @@
 use std::{env, io};
 use std::collections::{HashMap, HashSet, VecDeque};
 use advent_code_lib::{all_lines, ExNihilo, MultiLineObjects};
-use histogram::Histogram;
+use hash_histogram::HashHistogram;
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -73,15 +73,15 @@ struct BingoBoard {
     num2pos: HashMap<usize,(usize,usize)>,
     num_rows: usize,
     num_cols: usize,
-    row_counts: Histogram<usize>,
-    col_counts: Histogram<usize>,
+    row_counts: HashHistogram<usize>,
+    col_counts: HashHistogram<usize>,
     unmarked: HashSet<usize>
 }
 
 impl ExNihilo for BingoBoard {
     fn create() -> Self {
-        BingoBoard {num2pos: HashMap::new(), row_counts: Histogram::new(),
-            col_counts: Histogram::new(), num_cols: 0, num_rows: 0,
+        BingoBoard {num2pos: HashMap::new(), row_counts: HashHistogram::new(),
+            col_counts: HashHistogram::new(), num_cols: 0, num_rows: 0,
             unmarked: HashSet::new()}
     }
 }
@@ -110,7 +110,7 @@ impl BingoBoard {
         });
     }
 
-    fn winning(histogram: &Histogram<usize>, goal: usize) -> bool {
+    fn winning(histogram: &HashHistogram<usize>, goal: usize) -> bool {
         histogram.mode().map_or(false, |(_,count)| count >= goal)
     }
 
