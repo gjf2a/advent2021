@@ -34,13 +34,13 @@ impl BingoGame {
     }
 
     pub fn next_round_score(&mut self) -> Option<usize> {
-        self.boards.retain(|board| !board.is_winner());
+        self.boards.retain(|board| !board.winner);
         let play = self.calls.pop_front().unwrap();
         for board in self.boards.iter_mut() {
             board.mark(play);
         }
         self.boards.iter()
-            .find(|board| board.is_winner())
+            .find(|board| board.winner)
             .map(|board| board.unmarked.iter().sum::<usize>() * play)
     }
 
@@ -72,14 +72,15 @@ struct BingoBoard {
     num_cols: usize,
     row_counts: HashHistogram<usize>,
     col_counts: HashHistogram<usize>,
-    unmarked: HashSet<usize>
+    unmarked: HashSet<usize>,
+    winner: bool
 }
 
 impl ExNihilo for BingoBoard {
     fn create() -> Self {
         BingoBoard {num2pos: HashMap::new(), row_counts: HashHistogram::new(),
             col_counts: HashHistogram::new(), num_cols: 0, num_rows: 0,
-            unmarked: HashSet::new()}
+            unmarked: HashSet::new(), winner: false}
     }
 }
 
@@ -104,15 +105,9 @@ impl BingoBoard {
         self.num2pos.get(&num).map(|(col, row)| {
             self.col_counts.bump(col);
             self.row_counts.bump(row);
+            self.winner = self.winner ||
+                self.col_counts.count(col) == self.num_cols ||
+                self.row_counts.count(row) == self.num_rows;
         });
-    }
-
-    fn winning(histogram: &HashHistogram<usize>, goal: usize) -> bool {
-        histogram.mode().map_or(false, |(_,count)| count >= goal)
-    }
-
-    pub fn is_winner(&self) -> bool {
-        BingoBoard::winning(&self.col_counts, self.num_cols) ||
-            BingoBoard::winning(&self.row_counts, self.num_rows)
     }
 }
