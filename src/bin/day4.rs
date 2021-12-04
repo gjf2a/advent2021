@@ -13,11 +13,12 @@ fn main() -> io::Result<()> {
         loop {
             if let Some(score) = game.next_round_score() {
                 println!("part 1 score: {}", score);
-                break;
+                if game.num_boards() == 1 {
+                    println!("part 2 score: {}", score);
+                    return Ok(())
+                }
             }
         }
-
-        Ok(())
     }
 }
 
@@ -42,6 +43,7 @@ impl BingoGame {
     }
 
     pub fn next_round_score(&mut self) -> Option<usize> {
+        self.boards.retain(|board| !board.is_winner());
         let play = self.calls.pop_front().unwrap();
         for board in self.boards.iter_mut() {
             board.mark(play);
@@ -49,6 +51,10 @@ impl BingoGame {
         self.boards.iter()
             .find(|board| board.is_winner())
             .map(|board| board.unmarked.iter().sum::<usize>() * play)
+    }
+
+    pub fn num_boards(&self) -> usize {
+        self.boards.len()
     }
 }
 
