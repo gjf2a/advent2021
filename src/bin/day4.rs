@@ -27,13 +27,10 @@ impl BingoGame {
         let mut lines = all_lines(filename)?;
         let calls = lines.next().unwrap().split(",").map(|s| s.parse().unwrap()).collect();
         lines.next(); // Skip blank line
-        let mut reader = MultiLineObjects::new();
-        for line in lines {
-            reader.add_line(line.as_str(), &mut |board: &mut BingoBoard, line| {
-                board.add_row(line);
-            });
-        }
-        Ok(BingoGame {calls, boards: reader.objects()})
+        let boards = MultiLineObjects::from_iterator(lines, |board: &mut BingoBoard, line| {
+            board.add_row(line);
+        }).objects();
+        Ok(BingoGame {calls, boards})
     }
 
     pub fn next_round_score(&mut self) -> Option<usize> {
