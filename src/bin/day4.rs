@@ -25,7 +25,9 @@ struct BingoGame {
 impl BingoGame {
     pub fn from_file(filename: &str) -> io::Result<Self> {
         let mut lines = all_lines(filename)?;
-        let calls = lines.next().unwrap().split(",").map(|s| s.parse().unwrap()).collect();
+        let calls = lines.next().unwrap().split(",")
+            .map(|s| s.parse().unwrap())
+            .collect();
         lines.next(); // Skip blank line
         let boards = MultiLineObjects::from_iterator(lines, |board: &mut BingoBoard, line| {
             board.add_row(line);
@@ -86,11 +88,10 @@ impl ExNihilo for BingoBoard {
 
 impl BingoBoard {
     fn add_row(&mut self, row: &str) {
-        let row_num = self.num_rows;
         let mut col_num = 0;
         for num in row.split_whitespace() {
             let num = num.parse().unwrap();
-            self.num2pos.insert(num, (col_num, row_num));
+            self.num2pos.insert(num, (col_num, self.num_rows));
             self.unmarked.insert(num);
             col_num += 1;
         }
