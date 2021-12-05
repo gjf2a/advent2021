@@ -52,15 +52,7 @@ pub struct LineSegment {
 impl LineSegment {
     // Returning an Iterator: https://stackoverflow.com/questions/27535289/what-is-the-correct-way-to-return-an-iterator-or-any-other-trait
     pub fn points<'a>(&'a self, with_diagonals: bool) -> Box<dyn Iterator<Item = Position> + 'a> {
-        if self.start.row == self.end.row {
-            let start = min(self.start.col, self.end.col);
-            let end = max(self.start.col, self.end.col);
-            Box::new((start..=end).map(|x| Position::from((x, self.start.row))))
-        } else if self.start.col == self.end.col {
-            let start = min(self.start.row, self.end.row);
-            let end = max(self.start.row, self.end.row);
-            Box::new((start..=end).map(|y| Position::from((self.start.col, y))))
-        } else if with_diagonals && (self.start.col - self.end.col).abs() == (self.start.row - self.end.row).abs() {
+        if with_diagonals || self.start.row == self.end.row || self.start.col == self.end.col {
             Box::new(DiagonalIterator::from(self.start, self.end))
         } else {
             Box::new(iter::empty::<Position>())
@@ -69,7 +61,7 @@ impl LineSegment {
 }
 
 fn find_offset(start: isize, end: isize) -> isize {
-    if start < end {1} else {-1}
+    if start < end {1} else if start > end {-1} else {0}
 }
 
 struct DiagonalIterator {
