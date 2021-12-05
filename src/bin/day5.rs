@@ -1,5 +1,4 @@
-use std::{env, io, iter};
-use std::cmp::{max, min};
+use std::{env, io};
 use std::str::FromStr;
 use advent_code_lib::{all_lines, Position};
 use hash_histogram::HashHistogram;
@@ -50,12 +49,11 @@ pub struct LineSegment {
 }
 
 impl LineSegment {
-    // Returning an Iterator: https://stackoverflow.com/questions/27535289/what-is-the-correct-way-to-return-an-iterator-or-any-other-trait
-    pub fn points<'a>(&'a self, with_diagonals: bool) -> Box<dyn Iterator<Item = Position> + 'a> {
+    pub fn points(&self, with_diagonals: bool) -> LineSegmentPoints {
         if with_diagonals || self.start.row == self.end.row || self.start.col == self.end.col {
-            Box::new(DiagonalIterator::from(self.start, self.end))
+            LineSegmentPoints::from(self.start, self.end)
         } else {
-            Box::new(iter::empty::<Position>())
+            LineSegmentPoints::empty()
         }
     }
 }
@@ -64,21 +62,28 @@ fn find_offset(start: isize, end: isize) -> isize {
     if start < end {1} else if start > end {-1} else {0}
 }
 
-struct DiagonalIterator {
+pub struct LineSegmentPoints {
     d: Position,
     current: Position,
     last: Position,
     active: bool
 }
 
-impl DiagonalIterator {
+impl LineSegmentPoints {
     fn from(start: Position, end: Position) -> Self {
-        DiagonalIterator {d: Position::from((find_offset(start.col, end.col), find_offset(start.row, end.row))),
+        LineSegmentPoints {
+            d: Position::from((find_offset(start.col, end.col),
+                               find_offset(start.row, end.row))),
             current: start, last: end, active: true }
+    }
+
+    fn empty() -> Self {
+        LineSegmentPoints {d: Position::from((0, 0)), current: Position::from((0, 0)),
+            last: Position::from((0, 0)), active: false}
     }
 }
 
-impl Iterator for DiagonalIterator {
+impl Iterator for LineSegmentPoints {
     type Item = Position;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -135,4 +140,3 @@ fn max_from(acc: (usize, usize), seg: &LineSegment) -> (usize, usize) {
     (points.iter().copied().map(|(x, _)| x).max().unwrap(),
      points.iter().copied().map(|(_, y)| y).max().unwrap())
 }
-
