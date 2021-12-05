@@ -11,7 +11,7 @@ fn main() -> io::Result<()> {
     if args.len() < 3 {
         println!("Usage: day1 filename window_width")
     } else {
-        let depths = file2nums(format!("in/{}", args[1]).as_str())?;
+        let depths = file2nums(format!("{}", args[1]).as_str())?;
         let mut count = 0;
         let window_width = args[2].parse::<usize>().unwrap();
         for i in 0..depths.len() - window_width {
