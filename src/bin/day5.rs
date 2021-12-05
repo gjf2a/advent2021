@@ -9,54 +9,36 @@ fn main() -> io::Result<()> {
     if args.len() < 3 {
         println!("Usage: day5.txt filename (1|2) [show]");
     } else {
-        let with_diagonals = args[2] == "2";
-        let show = args.len() == 4;
-        let segments = all_lines(args[1].as_str())?
-            .map(|line| line.parse::<LineSegment>())
-            .collect::<Result<Vec<LineSegment>, io::Error>>()?;
-        let (max_x, max_y) = dimension(&segments);
-        let (width, height) = (max_x + 1, max_y + 1);
-        let mut counts = HashHistogram::new();
-        for segment in segments.iter() {
-            for p in segment.points(with_diagonals) {
-                counts.bump(&p);
-            }
-        }
-        if show {print_diagram(&counts, width, height);}
-        let score_part_1 = counts.iter()
-            .filter(|(_, count)| **count >= 2)
-            .count();
-        println!("Score: {}", score_part_1);
+        let (segments, with_diagonals, show) = segments_diagonals_show(&args)?;
+        let counts = count_intersections(&segments, with_diagonals);
+        if show {print_diagram(&counts, &segments);}
+        println!("Score: {}", score(&counts));
     }
     Ok(())
 }
 
-fn dimension(segments: &Vec<LineSegment>) -> (usize, usize) {
-    segments.iter().fold((0, 0), max_from)
+fn segments_diagonals_show(args: &Vec<String>) -> io::Result<(Vec<LineSegment>, bool, bool)> {
+    Ok((all_lines(args[1].as_str())?
+        .map(|line| line.parse::<LineSegment>())
+        .collect::<Result<Vec<LineSegment>, io::Error>>()?,
+        args[2] == "2",
+        args.len() == 4))
 }
 
-fn print_diagram(counts: &HashHistogram<Position>, width: usize, height: usize) {
-    for row in 0..height {
-        print!("{}: ", row);
-        for col in 0..width {
-            let c = counts.count(&Position::from((col as isize, row as isize)));
-            if c > 0 {
-                print!("{}", c);
-            } else {
-                print!(".");
-            }
+fn count_intersections(segments: &Vec<LineSegment>, with_diagonals: bool) -> HashHistogram<Position> {
+    let mut counts = HashHistogram::new();
+    for segment in segments.iter() {
+        for p in segment.points(with_diagonals) {
+            counts.bump(&p);
         }
-        println!();
     }
+    counts
 }
 
-fn max_from(acc: (usize, usize), seg: &LineSegment) -> (usize, usize) {
-    let points = [
-        (seg.start.col as usize, seg.start.row as usize),
-        (seg.end.col as usize, seg.end.row as usize),
-        acc];
-    (points.iter().copied().map(|(x, _)| x).max().unwrap(),
-     points.iter().copied().map(|(_, y)| y).max().unwrap())
+fn score(counts: &HashHistogram<Position>) -> usize {
+    counts.iter()
+        .filter(|(_, count)| **count >= 2)
+        .count()
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -130,12 +112,33 @@ impl FromStr for LineSegment {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_diagonal() {
-        println!("{:?}", LineSegment::from_str("1,1 -> 3,3").unwrap().points(true).collect::<Vec<Position>>());
+fn print_diagram(counts: &HashHistogram<Position>, segments: &Vec<LineSegment>) {
+    let (max_x, max_y) = dimension(&segments);
+    let (width, height) = (max_x + 1, max_y + 1);
+    for row in 0..height {
+        print!("{}: ", row);
+        for col in 0..width {
+            let c = counts.count(&Position::from((col as isize, row as isize)));
+            if c > 0 {
+                print!("{}", c);
+            } else {
+                print!(".");
+            }
+        }
+        println!();
     }
 }
+
+fn dimension(segments: &Vec<LineSegment>) -> (usize, usize) {
+    segments.iter().fold((0, 0), max_from)
+}
+
+fn max_from(acc: (usize, usize), seg: &LineSegment) -> (usize, usize) {
+    let points = [
+        (seg.start.col as usize, seg.start.row as usize),
+        (seg.end.col as usize, seg.end.row as usize),
+        acc];
+    (points.iter().copied().map(|(x, _)| x).max().unwrap(),
+     points.iter().copied().map(|(_, y)| y).max().unwrap())
+}
+
