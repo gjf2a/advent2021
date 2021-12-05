@@ -4,10 +4,12 @@ use std::str::FromStr;
 use advent_code_lib::{all_lines, Position};
 use hash_histogram::HashHistogram;
 
+const MIN_OVERLAP: usize = 2;
+
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
-        println!("Usage: day5.txt filename (1|2) [show]");
+        println!("Usage: day5 filename (1|2) [show]");
     } else {
         let (segments, with_diagonals, show) = segments_diagonals_show(&args)?;
         let counts = count_intersections(&segments, with_diagonals);
@@ -37,7 +39,7 @@ fn count_intersections(segments: &Vec<LineSegment>, with_diagonals: bool) -> Has
 
 fn score(counts: &HashHistogram<Position>) -> usize {
     counts.iter()
-        .filter(|(_, count)| **count >= 2)
+        .filter(|(_, count)| **count >= MIN_OVERLAP)
         .count()
 }
 
