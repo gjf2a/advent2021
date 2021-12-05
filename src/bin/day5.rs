@@ -1,6 +1,7 @@
 use std::{env, io};
+use std::cmp::{max, min};
 use std::str::FromStr;
-use advent_code_lib::{all_lines, Position, RowMajorPositionIterator};
+use advent_code_lib::{all_lines, Position};
 use hash_histogram::HashHistogram;
 
 fn main() -> io::Result<()> {
@@ -15,12 +16,14 @@ fn main() -> io::Result<()> {
         let (width, height) = (max_x + 1, max_y + 1);
         let mut counts = HashHistogram::new();
         for segment in segments.iter() {
-            for point in RowMajorPositionIterator::new(width, height)
-                .filter(|p| segment.contains(*p)) {
-                counts.bump(&point);
+            for p in segment.horizontals() {
+                counts.bump(&p);
+            }
+            for p in segment.verticals() {
+                counts.bump(&p);
             }
         }
-        //print_diagram(&counts, width, height);
+        print_diagram(&counts, width, height);
         let score_part_1 = counts.iter()
             .filter(|(_, count)| **count >= 2)
             .count();
@@ -64,17 +67,24 @@ struct LineSegment {
 }
 
 impl LineSegment {
-    fn contains(&self, p: Position) -> bool {
-        self.start.col == self.end.col && p.col == self.start.col && between(self.start.row, self.end.row, p.row)||
-            self.start.row == self.end.row && p.row == self.start.row && between(self.start.col, self.end.col, p.col)
+    fn horizontals(&self) -> impl Iterator<Item=Position> + '_ {
+        if self.start.row == self.end.row {
+            let start = min(self.start.col, self.end.col);
+            let end = max(self.start.col, self.end.col);
+            start..=end
+        } else {
+            0..=-1
+        }.map(|x| Position::from((x, self.start.row)))
     }
-}
 
-fn between(b1: isize, b2: isize, value: isize) -> bool {
-    if b1 < b2 {
-        value >= b1 && value <= b2
-    } else {
-        value >= b2 && value <= b1
+    fn verticals(&self) -> impl Iterator<Item=Position> + '_ {
+        if self.start.col == self.end.col {
+            let start = min(self.start.row, self.end.row);
+            let end = max(self.start.row, self.end.row);
+            start..=end
+        } else {
+            0..=-1
+        }.map(|y| Position::from((self.start.col, y)))
     }
 }
 
@@ -82,7 +92,7 @@ impl FromStr for LineSegment {
     type Err = io::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // TODO: Remove the unwrap() later.
+        // Consider removing the unwrap() later.
         let parsed = s.split(" -> ")
             .map(|s| s.parse::<Position>())
             .collect::<Result<Vec<Position>, io::Error>>()
