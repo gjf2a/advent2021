@@ -39,6 +39,7 @@ fn total_fish_at(lifetime: isize, table: &mut HashMap<isize, u128>) -> u128 {
         .sum::<u128>()
 }
 
+#[cfg(test)]
 mod tests {
     // 0: 8 (1)
     // 1: 7 (1)
