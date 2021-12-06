@@ -2,8 +2,8 @@ use std::{env, io};
 use std::collections::HashMap;
 use advent_code_lib::all_lines;
 
-const START: isize = 8;
-const RESET: isize = 6;
+const START: isize = 9;
+const RESET: isize = 7;
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -15,23 +15,23 @@ fn main() -> io::Result<()> {
         let mut table = HashMap::new();
         let total = lines.split(',')
             .map(|s| s.parse().unwrap())
-            .map(|f: isize| total_fish_at(duration + START - f, &mut table))
+            .map(|f: isize| total_fish_at(duration + START - f - 1, &mut table))
             .sum::<u128>();
         println!("Total fish: {}", total);
     }
     Ok(())
 }
 
-fn total_fish_at(timestamp: isize, table: &mut HashMap<isize, u128>) -> u128 {
-    1 + (START..=timestamp)
-        .filter(|i|  (i - (START - RESET)) % (RESET + 1) == 0)
+fn total_fish_at(lifetime: isize, table: &mut HashMap<isize, u128>) -> u128 {
+    1 + (START..=lifetime)
+        .step_by(RESET as usize)
         .map(|i| {
-            let new_start = timestamp - i;
-            if let Some(count) = table.get(&new_start) {
+            let spawn_lifetime = lifetime - i;
+            if let Some(count) = table.get(&spawn_lifetime) {
                 *count
             } else {
-                let result = total_fish_at(new_start, table);
-                table.insert(new_start, result);
+                let result = total_fish_at(spawn_lifetime, table);
+                table.insert(spawn_lifetime, result);
                 result
             }
 
