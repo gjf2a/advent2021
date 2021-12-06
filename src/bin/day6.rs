@@ -23,24 +23,20 @@ fn main() -> io::Result<()> {
 }
 
 fn total_fish_at(timestamp: isize, table: &mut HashMap<isize, u128>) -> u128 {
-    1 + if timestamp < 0 {
-        0
-    } else {
-        (START..=timestamp)
-            .filter(|i|  (i - (START - RESET)) % (RESET + 1) == 0)
-            .map(|i| {
-                let new_start = timestamp - i;
-                if let Some(count) = table.get(&new_start) {
-                    *count
-                } else {
-                    let result = total_fish_at(new_start, table);
-                    table.insert(new_start, result);
-                    result
-                }
+    1 + (START..=timestamp)
+        .filter(|i|  (i - (START - RESET)) % (RESET + 1) == 0)
+        .map(|i| {
+            let new_start = timestamp - i;
+            if let Some(count) = table.get(&new_start) {
+                *count
+            } else {
+                let result = total_fish_at(new_start, table);
+                table.insert(new_start, result);
+                result
+            }
 
-            })
-            .sum()
-    }
+        })
+        .sum::<u128>()
 }
 
 mod tests {
