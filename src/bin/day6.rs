@@ -8,7 +8,7 @@ const REST: usize = 7;
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
-        println!("Usage: day6 filename duration");
+        println!("Usage: day6 filename duration [table]");
     } else {
         let lines = all_lines(args[1].as_str())?.next().unwrap();
         let duration = args[2].parse::<usize>().unwrap();
@@ -17,6 +17,7 @@ fn main() -> io::Result<()> {
             .map(|s| s.parse().unwrap())
             .map(|f: usize| total_fish_at(duration + FIRST - f - 1, &mut table))
             .sum::<u128>();
+        if args.len() > 3 {display(&table);}
         println!("Total fish: {}", total);
     }
     Ok(())
@@ -37,6 +38,12 @@ fn total_fish_at(lifetime: usize, table: &mut HashMap<usize, u128>) -> u128 {
 
         })
         .sum::<u128>()
+}
+
+fn display(table: &HashMap<usize, u128>) {
+    let mut pairs = table.iter().collect::<Vec<_>>();
+    pairs.sort();
+    println!("{:?}", pairs);
 }
 
 #[cfg(test)]
