@@ -1,4 +1,5 @@
 use std::{env, io};
+use std::collections::HashMap;
 use advent_code_lib::all_lines;
 
 const START: isize = 8;
@@ -11,11 +12,12 @@ fn main() -> io::Result<()> {
     } else {
         let lines = all_lines(args[1].as_str())?.next().unwrap();
         let duration = args[2].parse::<isize>().unwrap();
+        let mut table: HashMap<isize,u128> = HashMap::new();
         let total = lines.split(',')
             .map(|s| s.parse().unwrap())
-            .map(|f: isize| total_fish_at(duration + START - f))
+            .map(|f: isize| total_fish_at(duration + START - f, &mut table))
             .sum::<u128>();
-        println!("Part 1 solution: {}", total);
+        println!("Total fish: {}", total);
     }
     Ok(())
 }
@@ -41,25 +43,24 @@ fn main() -> io::Result<()> {
 // 17: 5, 0, 7 (3)
 // 18: 4, 6, 6, 8 (4)
 
-fn total_fish_at(timestamp: isize) -> u128 {
+fn total_fish_at(timestamp: isize, table: &mut HashMap<isize, u128>) -> u128 {
     1 + if timestamp < 0 {
         0
     } else {
         (START..=timestamp)
             .filter(|i|  (i - (START - RESET)) % (RESET + 1) == 0)
-            .map(|i| total_fish_at(timestamp - i))
+            .map(|i| {
+                let new_start = timestamp - i;
+                if let Some(count) = table.get(&new_start) {
+                    *count
+                } else {
+                    let result = total_fish_at(new_start, table);
+                    table.insert(new_start, result);
+                    result
+                }
+
+            })
             .sum()
-    }
-}
-
-struct LanternfishTable {
-    counts_at: Vec<u128>
-}
-
-impl LanternfishTable {
-    pub fn new(timestamp: isize) -> Self {
-        let counts_at = Vec::new();
-        LanternfishTable {counts_at}
     }
 }
 
@@ -68,8 +69,9 @@ mod tests {
 
     #[test]
     fn test() {
+        let mut table: HashMap<isize,u128> = HashMap::new();
         for (i, goal) in [1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4].iter().enumerate() {
-            let total = total_fish_at(i as isize);
+            let total = total_fish_at(i as isize, &mut table);
             println!("i: {} goal: {} total: {}", i, goal, total);
             assert_eq!(total, *goal);
         }
