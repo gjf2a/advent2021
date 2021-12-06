@@ -11,7 +11,7 @@ fn main() -> io::Result<()> {
         println!("Usage: day6 filename duration [table]");
     } else {
         let lines = all_lines(args[1].as_str())?.next().unwrap();
-        let duration = args[2].parse::<usize>().unwrap();
+        let duration: usize = args[2].parse().unwrap();
         let mut table = HashMap::new();
         let total = lines.split(',')
             .map(|s| s.parse().unwrap())
