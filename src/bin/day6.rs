@@ -2,8 +2,8 @@ use std::{env, io};
 use std::collections::HashMap;
 use advent_code_lib::all_lines;
 
-const FIRST: isize = 9;
-const REST: isize = 7;
+const FIRST: usize = 9;
+const REST: usize = 7;
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -11,20 +11,20 @@ fn main() -> io::Result<()> {
         println!("Usage: day6 filename duration");
     } else {
         let lines = all_lines(args[1].as_str())?.next().unwrap();
-        let duration = args[2].parse::<isize>().unwrap();
+        let duration = args[2].parse::<usize>().unwrap();
         let mut table = HashMap::new();
         let total = lines.split(',')
             .map(|s| s.parse().unwrap())
-            .map(|f: isize| total_fish_at(duration + FIRST - f - 1, &mut table))
+            .map(|f: usize| total_fish_at(duration + FIRST - f - 1, &mut table))
             .sum::<u128>();
         println!("Total fish: {}", total);
     }
     Ok(())
 }
 
-fn total_fish_at(lifetime: isize, table: &mut HashMap<isize, u128>) -> u128 {
+fn total_fish_at(lifetime: usize, table: &mut HashMap<usize, u128>) -> u128 {
     1 + (FIRST..=lifetime)
-        .step_by(REST as usize)
+        .step_by(REST)
         .map(|i| {
             let spawn_lifetime = lifetime - i;
             if let Some(count) = table.get(&spawn_lifetime) {
@@ -67,7 +67,7 @@ mod tests {
     fn test() {
         let mut table = HashMap::new();
         for (i, goal) in [1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4].iter().enumerate() {
-            let total = total_fish_at(i as isize, &mut table);
+            let total = total_fish_at(i, &mut table);
             println!("i: {} goal: {} total: {}", i, goal, total);
             assert_eq!(total, *goal);
         }
