@@ -39,42 +39,39 @@ fn main() -> io::Result<()> {
 // 15: 0, 2 (2)
 // 16: 6, 1, 8 (3)
 // 17: 5, 0, 7 (3)
-// 18: 4, 6, 6 (4)
-
-// Basic spawning: 1 + (timestamp - 2) % 7
-// Recursive spawning: At (timestamp - 2) % 7 == 0, recursion(
+// 18: 4, 6, 6, 8 (4)
 
 fn total_fish_at(timestamp: isize) -> u128 {
-    let mut total = 1;
-    for i in (0..=timestamp).rev() {
-        if (i - (START - RESET)) % (RESET + 1) == 0 {
-            total += total_fish_at(i)
-        }
+    1 + if timestamp < 0 {
+        0
+    } else {
+        (START..=timestamp)
+            .filter(|i|  (i - (START - RESET)) % (RESET + 1) == 0)
+            .map(|i| total_fish_at(timestamp - i))
+            .sum()
     }
-    total
+}
+
+struct LanternfishTable {
+    counts_at: Vec<u128>
+}
+
+impl LanternfishTable {
+    pub fn new(timestamp: isize) -> Self {
+        let counts_at = Vec::new();
+        LanternfishTable {counts_at}
+    }
 }
 
 mod tests {
     use super::*;
 
     #[test]
-    fn base_test() {
-        for (i, goal) in [1, 1].iter().enumerate() {
-            assert_eq!(total_fish_at(i as isize), *goal);
-        }
-    }
-
-    #[test]
-    fn failing_test() {
-        for (i, goal) in [1, 1, 1].iter().enumerate() {
-            assert_eq!(total_fish_at(i as isize), *goal);
-        }
-    }
-
-    #[test]
     fn test() {
-        for (i, goal) in [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4].iter().enumerate() {
-            assert_eq!(total_fish_at(i as isize), *goal);
+        for (i, goal) in [1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4].iter().enumerate() {
+            let total = total_fish_at(i as isize);
+            println!("i: {} goal: {} total: {}", i, goal, total);
+            assert_eq!(total, *goal);
         }
     }
 }

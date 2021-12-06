@@ -9,4 +9,4 @@ edition = "2021"
 num = "0.4"
 advent_code_lib = {git = "https://github.com/gjf2a/advent_code_lib"}
 bits = {git = "https://github.com/gjf2a/bits"}
-hash_histogram = "0.5"
+hash_histogram = "0.6"
