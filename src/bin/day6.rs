@@ -12,7 +12,7 @@ fn main() -> io::Result<()> {
     } else {
         let lines = all_lines(args[1].as_str())?.next().unwrap();
         let duration = args[2].parse::<isize>().unwrap();
-        let mut table: HashMap<isize,u128> = HashMap::new();
+        let mut table = HashMap::new();
         let total = lines.split(',')
             .map(|s| s.parse().unwrap())
             .map(|f: isize| total_fish_at(duration + START - f, &mut table))
@@ -69,7 +69,7 @@ mod tests {
 
     #[test]
     fn test() {
-        let mut table: HashMap<isize,u128> = HashMap::new();
+        let mut table = HashMap::new();
         for (i, goal) in [1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4].iter().enumerate() {
             let total = total_fish_at(i as isize, &mut table);
             println!("i: {} goal: {} total: {}", i, goal, total);
