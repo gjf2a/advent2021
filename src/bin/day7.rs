@@ -27,7 +27,9 @@ fn part1_fuel_used_position(positions: &Vec<isize>) -> (isize, isize) {
 }
 
 fn part2_fuel_used_position(positions: &Vec<isize>) -> (isize, isize) {
-    (positions[0]..=positions[positions.len() - 1]).map(|p| (part2_fuel_for(p, positions), p)).min().unwrap()
+    (positions[0]..=positions[positions.len() - 1])
+        .map(|p| (part2_fuel_for(p, positions), p))
+        .min().unwrap()
 }
 
 fn part2_fuel_for(position: isize, positions: &Vec<isize>) -> isize {
