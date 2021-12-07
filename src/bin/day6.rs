@@ -1,6 +1,6 @@
 use std::{env, io};
 use std::collections::HashMap;
-use advent_code_lib::all_lines;
+use advent_code_lib::first_line_only_numbers;
 
 const FIRST: usize = 9;
 const REST: usize = 7;
@@ -10,12 +10,11 @@ fn main() -> io::Result<()> {
     if args.len() < 3 {
         println!("Usage: day6 filename duration [table]");
     } else {
-        let lines = all_lines(args[1].as_str())?.next().unwrap();
+        let fish_counters = first_line_only_numbers::<usize>(args[1].as_str())?;
         let duration: usize = args[2].parse().unwrap();
         let mut table = HashMap::new();
-        let total = lines.split(',')
-            .map(|s| s.parse().unwrap())
-            .map(|f: usize| total_fish_at(duration + FIRST - f - 1, &mut table))
+        let total = fish_counters.iter()
+            .map(|f| total_fish_at(duration + FIRST - f - 1, &mut table))
             .sum::<u128>();
         if args.len() > 3 {display(&table);}
         println!("Total fish: {}", total);

@@ -1,6 +1,6 @@
 use std::{env, io};
 use std::collections::{HashMap, HashSet, VecDeque};
-use advent_code_lib::{all_lines, ExNihilo, MultiLineObjects};
+use advent_code_lib::{all_lines, ExNihilo, line2numbers_iter, MultiLineObjects};
 use hash_histogram::HashHistogram;
 
 fn main() -> io::Result<()> {
@@ -25,9 +25,7 @@ struct BingoGame {
 impl BingoGame {
     pub fn from_file(filename: &str) -> io::Result<Self> {
         let mut lines = all_lines(filename)?;
-        let calls = lines.next().unwrap().split(",")
-            .map(|s| s.parse().unwrap())
-            .collect();
+        let calls = line2numbers_iter(lines.next().unwrap().as_str()).collect();
         lines.next(); // Skip blank line
         let boards = MultiLineObjects::from_iterator(lines, |board: &mut BingoBoard, line| {
             board.add_row(line);

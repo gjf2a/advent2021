@@ -1,14 +1,12 @@
 use std::{env, io};
-use advent_code_lib::all_lines;
+use advent_code_lib::first_line_only_numbers;
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         println!("Usage: day7 filename");
     } else {
-        let mut positions = all_lines(args[1].as_str())?
-            .next().unwrap().split(',').map(|s| s.parse().unwrap())
-            .collect::<Vec<isize>>();
+        let mut positions = first_line_only_numbers(args[1].as_str())?;
         positions.sort();
         report(1, &positions, part1_fuel_used_position);
         report(2, &positions, part2_fuel_used_position);
