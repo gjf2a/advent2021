@@ -21,7 +21,7 @@ fn report(part: usize, positions: &Vec<isize>, fuel_used_position: fn(&Vec<isize
 
 fn part1_fuel_used_position(positions: &Vec<isize>) -> (isize, isize) {
     let median = positions[positions.len() / 2];
-    (positions.iter().map(|p| part1_fuel_used(median, *p)).sum::<isize>(), median)
+    (positions.iter().map(|p| part1_fuel_used(median, *p)).sum(), median)
 }
 
 fn part2_fuel_used_position(positions: &Vec<isize>) -> (isize, isize) {
