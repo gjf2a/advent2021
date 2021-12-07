@@ -32,8 +32,8 @@ fn part2_fuel_used_position(positions: &Vec<isize>) -> (isize, isize) {
         .min().unwrap()
 }
 
-fn part2_fuel_for(position: isize, positions: &Vec<isize>) -> isize {
-    positions.iter().map(|p| part2_fuel_used(position, *p)).sum()
+fn part2_fuel_for(candidate: isize, positions: &Vec<isize>) -> isize {
+    positions.iter().map(|p| part2_fuel_used(candidate, *p)).sum()
 }
 
 fn part2_fuel_used(p1: isize, p2: isize) -> isize {
