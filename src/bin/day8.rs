@@ -1,5 +1,5 @@
 use std::{env, io};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use advent_code_lib::all_lines;
 
 const PATTERN_FOR: [&'static str; 10] = ["abcefg", "cf", "acdeg", "acdfg", "bcdf", "abdfg", "abdefg", "acf", "abcdefg", "abcdfg"];
@@ -22,8 +22,7 @@ fn main() -> io::Result<()> {
 
 struct DeviceEntry {
     inputs: Vec<String>,
-    outputs: Vec<String>,
-    easy_lengths: Vec<usize>
+    outputs: Vec<String>
 }
 
 impl DeviceEntry {
@@ -31,24 +30,11 @@ impl DeviceEntry {
         let mut parts = line.split('|');
         let inputs = snag_put(parts.next().unwrap());
         let outputs = snag_put(parts.next().unwrap());
-        let easy_lengths = PATTERN_FOR.iter()
-            .enumerate()
-            .filter(|(i, _)| [1, 4, 7, 8].contains(i))
-            .map(|(_, s)| s.len())
-            .collect();
-        DeviceEntry {inputs, outputs, easy_lengths}
-    }
-
-    fn easy_for(&self, entries: &Vec<String>) -> Vec<String> {
-        entries.iter()
-            .filter(|s| self.easy_lengths.contains(&s.len()))
-            .cloned()
-            .collect()
+        DeviceEntry {inputs, outputs}
     }
 
     fn find_mapping(&self) -> HashMap<char, char> {
         let mut result = HashMap::new();
-        let starting_points = self.easy_for(&self.inputs);
         result
     }
 }
@@ -59,8 +45,14 @@ fn snag_put(part: &str) -> Vec<String> {
 
 fn solve_part_1(entries: &Vec<DeviceEntry>) -> usize {
     let patterns_by_lengths = by_lengths(&PATTERN_FOR);
+    let easy_lengths: HashSet<usize> = patterns_by_lengths.iter()
+        .filter(|(_, patterns)| patterns.len() == 1)
+        .map(|(len, _)| *len)
+        .collect();
     entries.iter()
-        .map(|entry| entry.easy_for(&entry.outputs).len())
+        .map(|entry| entry.outputs.iter()
+            .filter(|output| easy_lengths.contains(&output.len()))
+            .count())
         .sum()
 }
 
@@ -68,8 +60,8 @@ fn by_lengths(strs: &[&str]) -> HashMap<usize, Vec<String>> {
     let mut result = HashMap::new();
     for s in strs {
         match result.get_mut(&s.len()) {
-            None => {result.insert(s.len(), vec![s.to_string()])}
-            Some(v) => {v.push(s.to_string())}
+            None => {result.insert(s.len(), vec![s.to_string()]);}
+            Some(v) => {v.push(s.to_string());}
         }
     }
     result
