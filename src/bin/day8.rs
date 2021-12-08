@@ -9,13 +9,11 @@ fn main() -> io::Result<()> {
     if args.len() < 2 {
         println!("Usage: day8 filename");
     } else {
-        let entries = all_lines(args[1].as_str())?
+        let entries: Vec<DeviceEntry> = all_lines(args[1].as_str())?
             .map(|s| DeviceEntry::from(s.as_str()))
-            .collect::<Vec<_>>();
-        let part1 = solve_part_1(&entries);
-        println!("Part 1: {}", part1);
-        let part2 = solve_part_2(&entries);
-        println!("Part 2: {}", part2);
+            .collect();
+        println!("Part 1: {}", solve_part_1(&entries));
+        println!("Part 2: {}", solve_part_2(&entries));
     }
     Ok(())
 }
