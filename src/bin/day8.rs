@@ -58,8 +58,17 @@ impl DeviceEntry {
         result
     }
 
-    fn decode_outputs<'a>(&'a self, mapping: &'a HashMap<char, char>) -> impl Iterator<Item=usize> + 'a {
+    fn output_digits<'a>(&'a self, mapping: &'a HashMap<char, char>) -> impl Iterator<Item=usize> + 'a {
         self.outputs.iter().map(|output| decode(output.as_str(), mapping))
+    }
+
+    fn output_value(&self) -> usize {
+        let mut total = 0;
+        for digit in self.output_digits(&self.find_mapping()) {
+            total *= 10;
+            total += digit;
+        }
+        total
     }
 }
 
@@ -147,12 +156,5 @@ fn find_easy_lengths(strs: &[&str]) -> HashSet<usize> {
 }
 
 fn solve_part_2(entries: &Vec<DeviceEntry>) -> usize {
-    for entry in entries.iter() {
-        let mapping = entry.find_mapping();
-        println!("{:?}", entry);
-        println!("{:?}", mapping);
-        let digits: Vec<usize> = entry.decode_outputs(&mapping).collect();
-        println!("{:?}", digits);
-    }
-    0
+    entries.iter().map(|entry| entry.output_value()).sum()
 }
