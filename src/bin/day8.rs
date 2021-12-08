@@ -1,4 +1,5 @@
 use std::{env, io};
+use std::collections::HashMap;
 use advent_code_lib::all_lines;
 
 const PATTERN_FOR: [&'static str; 10] = ["abcefg", "cf", "acdeg", "acdfg", "bcdf", "abdfg", "abdefg", "acf", "abcdefg", "abcdfg"];
@@ -13,13 +14,16 @@ fn main() -> io::Result<()> {
             .collect::<Vec<_>>();
         let part1 = solve_part_1(&entries);
         println!("Part 1: {}", part1);
+        let part2 = solve_part_2(&entries);
+        println!("Part 2: {}", part2);
     }
     Ok(())
 }
 
 struct DeviceEntry {
     inputs: Vec<String>,
-    outputs: Vec<String>
+    outputs: Vec<String>,
+    easy_lengths: Vec<usize>
 }
 
 impl DeviceEntry {
@@ -27,7 +31,25 @@ impl DeviceEntry {
         let mut parts = line.split('|');
         let inputs = snag_put(parts.next().unwrap());
         let outputs = snag_put(parts.next().unwrap());
-        DeviceEntry {inputs, outputs}
+        let easy_lengths = PATTERN_FOR.iter()
+            .enumerate()
+            .filter(|(i, _)| [1, 4, 7, 8].contains(i))
+            .map(|(_, s)| s.len())
+            .collect();
+        DeviceEntry {inputs, outputs, easy_lengths}
+    }
+
+    fn easy_for(&self, entries: &Vec<String>) -> Vec<String> {
+        entries.iter()
+            .filter(|s| self.easy_lengths.contains(&s.len()))
+            .cloned()
+            .collect()
+    }
+
+    fn find_mapping(&self) -> HashMap<char, char> {
+        let mut result = HashMap::new();
+        let starting_points = self.easy_for(&self.inputs);
+        result
     }
 }
 
@@ -36,17 +58,11 @@ fn snag_put(part: &str) -> Vec<String> {
 }
 
 fn solve_part_1(entries: &Vec<DeviceEntry>) -> usize {
-    let easy_lengths: Vec<usize> = PATTERN_FOR.iter()
-        .enumerate()
-        .filter(|(i, _)| [1, 4, 7, 8].contains(i))
-        .map(|(_, s)| s.len())
-        .collect();
-    let lengths = PATTERN_FOR.iter().map(|s| s.len()).collect::<Vec<_>>();
     entries.iter()
-        .map(|entry| entry.outputs.iter()
-            .map(|output| output.len())
-            .filter(|output_len| easy_lengths.contains(output_len))
-            .map(|output_len| lengths[output_len])
-            .count())
+        .map(|entry| entry.easy_for(&entry.outputs).len())
         .sum()
+}
+
+fn solve_part_2(entries: &Vec<DeviceEntry>) -> usize {
+    0
 }
