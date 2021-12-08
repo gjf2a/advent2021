@@ -58,9 +58,21 @@ fn snag_put(part: &str) -> Vec<String> {
 }
 
 fn solve_part_1(entries: &Vec<DeviceEntry>) -> usize {
+    let patterns_by_lengths = by_lengths(&PATTERN_FOR);
     entries.iter()
         .map(|entry| entry.easy_for(&entry.outputs).len())
         .sum()
+}
+
+fn by_lengths(strs: &[&str]) -> HashMap<usize, Vec<String>> {
+    let mut result = HashMap::new();
+    for s in strs {
+        match result.get_mut(&s.len()) {
+            None => {result.insert(s.len(), vec![s.to_string()])}
+            Some(v) => {v.push(s.to_string())}
+        }
+    }
+    result
 }
 
 fn solve_part_2(entries: &Vec<DeviceEntry>) -> usize {
