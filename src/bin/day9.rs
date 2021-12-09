@@ -30,7 +30,7 @@ impl HeightMap {
 
     fn low_points(&self) -> impl Iterator<Item=(Position,u32)> + '_ {
         self.heights.iter()
-            .filter(|(p, h)| self.adjacent_location_heights(**p).all(|nh| nh > **h))
+            .filter(|(p, h)| self.adjacent_location_heights(*p).all(|nh| nh > **h))
             .map(|(p, h)| (*p, *h))
     }
 
@@ -38,7 +38,7 @@ impl HeightMap {
         self.low_points().map(|(_, h)| h + 1).sum()
     }
 
-    fn adjacent_location_heights(&self, p: Position) -> impl Iterator<Item=u32> + 'static {
+    fn adjacent_location_heights<'a>(&'a self, p: &'a Position) -> impl Iterator<Item=u32> + 'a {
         p.manhattan_neighbors().filter_map(|n| self.heights.get(&n).copied())
     }
 }

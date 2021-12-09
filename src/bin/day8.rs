@@ -9,7 +9,7 @@ fn main() -> io::Result<()> {
     if args.len() < 2 {
         println!("Usage: day8 filename");
     } else {
-        let entries: Vec<DeviceEntry> = all_lines(args[1].as_str())?
+        let entries = all_lines(args[1].as_str())?
             .map(|s| DeviceEntry::from(s.as_str()))
             .collect();
         println!("Part 1: {}", solve_part_1(&entries));
@@ -19,7 +19,7 @@ fn main() -> io::Result<()> {
 }
 
 fn solve_part_1(entries: &Vec<DeviceEntry>) -> usize {
-    let easy_lengths: HashSet<usize> = find_easy_lengths(&PATTERN_FOR);
+    let easy_lengths = find_easy_lengths(&PATTERN_FOR);
     entries.iter()
         .map(|entry| entry.outputs.iter()
             .filter(|output| easy_lengths.contains(&output.len()))
@@ -101,8 +101,7 @@ fn decode(output: &str, mapping: &HashMap<char, char>) -> usize {
 
 fn set_chain<'a>(lengths: &'a [usize], lengths2charsets: &'a HashMap<usize, Vec<HashSet<char>>>)
                  -> impl Iterator<Item=&'a HashSet<char>> {
-    lengths.iter()
-        .flat_map(|length| lengths2charsets.get(length).unwrap().iter())
+    lengths.iter().flat_map(|length| lengths2charsets.get(length).unwrap().iter())
 }
 
 fn intersection<'a, I: Iterator<Item=&'a HashSet<char>>>(mut sets: I) -> HashSet<char> {
