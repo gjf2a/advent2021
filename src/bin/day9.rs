@@ -23,7 +23,8 @@ impl HeightMap {
         let mut heights = HashMap::new();
         for (row, line) in all_lines(filename)?.enumerate() {
             for (col, height_char) in line.chars().enumerate() {
-                heights.insert(Position::from((col as isize, row as isize)), height_char.to_digit(10).unwrap());
+                heights.insert(Position::from((col as isize, row as isize)),
+                               height_char.to_digit(10).unwrap());
             }
         }
         Ok(HeightMap {heights})
@@ -46,8 +47,9 @@ impl HeightMap {
     }
 
     fn basin_size_for(&self, p: &Position) -> usize {
-        breadth_first_search(p, |c| c.manhattan_neighbors()
-            .filter(|n| self.heights.get(n)
+        breadth_first_search(p, |c|
+            c.manhattan_neighbors()
+                .filter(|n| self.heights.get(n)
                 .map_or(false, |h| *h < MIN_SAFE_HEIGHT)).collect())
             .len()
     }
