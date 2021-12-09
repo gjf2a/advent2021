@@ -1,6 +1,6 @@
 use std::{env, io};
-use std::collections::{HashMap, HashSet, VecDeque};
-use advent_code_lib::{all_lines, Position};
+use std::collections::HashMap;
+use advent_code_lib::{all_lines, breadth_first_search, Position};
 
 const MIN_SAFE_HEIGHT: u32 = 9;
 const NUM_LARGEST_BASINS: usize = 3;
@@ -49,24 +49,10 @@ impl HeightMap {
     }
 
     fn basin_size_for(&self, p: &Position) -> usize {
-        let mut open_list = VecDeque::new();
-        let mut visited = HashSet::new();
-        open_list.push_back(*p);
-        loop {
-            match open_list.pop_front() {
-                None => break,
-                Some(candidate) => {
-                    if !visited.contains(&candidate) {
-                        visited.insert(candidate);
-                        for neighbor in candidate.manhattan_neighbors()
-                            .filter(|n| self.heights.get(n).map_or(false, |h| *h < MIN_SAFE_HEIGHT)) {
-                            open_list.push_back(neighbor);
-                        }
-                    }
-                }
-            }
-        }
-        visited.len()
+        breadth_first_search(p, |c| c.manhattan_neighbors()
+            .filter(|n| self.heights.get(n)
+                .map_or(false, |h| *h < MIN_SAFE_HEIGHT)).collect())
+            .len()
     }
 
     fn all_basin_sizes(&self) -> impl Iterator<Item=usize> + '_ {
