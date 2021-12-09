@@ -1,7 +1,6 @@
 use std::io;
 use std::collections::HashMap;
 use advent_code_lib::{all_lines, breadth_first_search, generic_main, Position};
-use priority_queue::PriorityQueue;
 
 const MIN_SAFE_HEIGHT: u32 = 9;
 const NUM_LARGEST_BASINS: usize = 3;
@@ -35,10 +34,9 @@ impl HeightMap {
     }
 
     fn largest_basin_product(&self) -> usize {
-        let basin_sizes: PriorityQueue<usize,usize> = self.all_basin_sizes()
-            .map(|size| (size, size))
-            .collect();
-        basin_sizes.into_sorted_iter().take(NUM_LARGEST_BASINS).map(|(s, _)| s).product()
+        let mut basin_sizes: Vec<usize> = self.all_basin_sizes().collect();
+        basin_sizes.sort();
+        (1..=NUM_LARGEST_BASINS).map(|i| basin_sizes[basin_sizes.len() - i]).product()
     }
 
     fn low_points(&self) -> impl Iterator<Item=(Position,u32)> + '_ {
