@@ -1,21 +1,18 @@
-use std::{env, io};
+use std::io;
 use std::collections::{HashMap, HashSet};
-use advent_code_lib::all_lines;
+use advent_code_lib::{all_lines, generic_main};
 
 const PATTERN_FOR: [&'static str; 10] = ["abcefg", "cf", "acdeg", "acdfg", "bcdf", "abdfg", "abdefg", "acf", "abcdefg", "abcdfg"];
 
 fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        println!("Usage: day8 filename");
-    } else {
+    generic_main("day8", &[], &[], |args| {
         let entries = all_lines(args[1].as_str())?
             .map(|s| DeviceEntry::from(s.as_str()))
             .collect();
         println!("Part 1: {}", solve_part_1(&entries));
         println!("Part 2: {}", solve_part_2(&entries));
-    }
-    Ok(())
+        Ok(())
+    })
 }
 
 fn solve_part_1(entries: &Vec<DeviceEntry>) -> usize {

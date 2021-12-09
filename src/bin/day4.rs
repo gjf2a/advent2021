@@ -1,19 +1,15 @@
-use std::{env, io};
+use std::io;
 use std::collections::{HashMap, HashSet, VecDeque};
-use advent_code_lib::{all_lines, ExNihilo, line2numbers_iter, MultiLineObjects};
+use advent_code_lib::{all_lines, ExNihilo, generic_main, line2numbers_iter, MultiLineObjects};
 use hash_histogram::HashHistogram;
 
 fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        println!("Usage: day4 filename");
-        Ok(())
-    } else {
+    generic_main("day4", &[], &[], |args| {
         let mut game = BingoGame::from_file(args[1].as_str())?;
         println!("Part 1 score: {}", game.next().unwrap());
         println!("Part 2 score: {}", game.last().unwrap());
         Ok(())
-    }
+    })
 }
 
 #[derive(Clone)]

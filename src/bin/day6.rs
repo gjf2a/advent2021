@@ -1,15 +1,12 @@
-use std::{env, io};
+use std::io;
 use std::collections::HashMap;
-use advent_code_lib::first_line_only_numbers;
+use advent_code_lib::{first_line_only_numbers, generic_main};
 
 const FIRST: usize = 9;
 const REST: usize = 7;
 
 fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
-        println!("Usage: day6 filename duration [table]");
-    } else {
+    generic_main("day6", &["duration"], &["table"], |args| {
         let fish_counters = first_line_only_numbers::<usize>(args[1].as_str())?;
         let duration: usize = args[2].parse().unwrap();
         let mut table = HashMap::new();
@@ -18,8 +15,8 @@ fn main() -> io::Result<()> {
             .sum::<u128>();
         if args.len() > 3 {display(&table);}
         println!("Total fish: {}", total);
-    }
-    Ok(())
+        Ok(())
+    })
 }
 
 fn total_fish_at(lifetime: usize, table: &mut HashMap<usize, u128>) -> u128 {

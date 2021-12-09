@@ -1,21 +1,18 @@
-use std::{env, io};
+use std::io;
 use std::str::FromStr;
-use advent_code_lib::{all_lines, Position};
+use advent_code_lib::{all_lines, generic_main, Position};
 use hash_histogram::HashHistogram;
 
 const MIN_OVERLAP: usize = 2;
 
 fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
-        println!("Usage: day5 filename (1|2) [show]");
-    } else {
+    generic_main("day5", &["(1|2)"], &["show"], |args| {
         let (segments, with_diagonals, show) = segments_diagonals_show(&args)?;
         let counts = count_intersections(&segments, with_diagonals);
         if show {print_diagram(&counts, &segments);}
         println!("Score: {}", score(&counts));
-    }
-    Ok(())
+        Ok(())
+    })
 }
 
 fn segments_diagonals_show(args: &Vec<String>) -> io::Result<(Vec<LineSegment>, bool, bool)> {

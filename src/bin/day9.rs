@@ -1,20 +1,18 @@
-use std::{env, io};
+use std::io;
 use std::collections::HashMap;
-use advent_code_lib::{all_lines, breadth_first_search, Position};
+use advent_code_lib::{all_lines, breadth_first_search, generic_main, Position};
+use priority_queue::PriorityQueue;
 
 const MIN_SAFE_HEIGHT: u32 = 9;
 const NUM_LARGEST_BASINS: usize = 3;
 
 fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        println!("Usage: day9 filename");
-    } else {
+    generic_main("day9", &[], &[], |args| {
         let heights = HeightMap::from(args[1].as_str())?;
         println!("Part 1: {}", heights.risk_level_sum());
         println!("Part 2: {}", heights.largest_basin_product());
-    }
-    Ok(())
+        Ok(())
+    })
 }
 
 struct HeightMap {
@@ -37,9 +35,10 @@ impl HeightMap {
     }
 
     fn largest_basin_product(&self) -> usize {
-        let mut basin_sizes: Vec<usize> = self.all_basin_sizes().collect();
-        basin_sizes.sort();
-        (1..=NUM_LARGEST_BASINS).map(|i| basin_sizes[basin_sizes.len() - i]).product()
+        let basin_sizes: PriorityQueue<usize,usize> = self.all_basin_sizes()
+            .map(|size| (size, size))
+            .collect();
+        basin_sizes.into_sorted_iter().take(NUM_LARGEST_BASINS).map(|(s, _)| s).product()
     }
 
     fn low_points(&self) -> impl Iterator<Item=(Position,u32)> + '_ {

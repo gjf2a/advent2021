@@ -1,5 +1,23 @@
-use std::{env, io};
-use advent_code_lib::{for_each_line, Position};
+use std::io;
+use advent_code_lib::{for_each_line, generic_main, Position};
+
+fn main() -> io::Result<()> {
+    generic_main("day2", &["(1|2)"], &[], |args| {
+        let mut sub = Submarine::new();
+        for_each_line(args[1].as_str(), |line| {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            let distance = parts[1].parse::<isize>().unwrap();
+            match args[2].as_str() {
+                "1" => sub.update_1(parts[0], distance),
+                "2" => sub.update_2(parts[0], distance),
+                other => {println!("Illegal argument: {}", other);}
+            }
+            Ok(())
+        })?;
+        sub.report();
+        Ok(())
+    })
+}
 
 struct Submarine {
     pos: Position,
@@ -35,23 +53,3 @@ impl Submarine {
     }
 }
 
-fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
-        println!("Usage: day2 inputfile (1|2)");
-    } else {
-        let mut sub = Submarine::new();
-        for_each_line(args[1].as_str(), |line| {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            let distance = parts[1].parse::<isize>().unwrap();
-            match args[2].as_str() {
-                "1" => sub.update_1(parts[0], distance),
-                "2" => sub.update_2(parts[0], distance),
-                other => {println!("Illegal argument: {}", other);}
-            }
-            Ok(())
-        })?;
-        sub.report();
-    }
-    Ok(())
-}

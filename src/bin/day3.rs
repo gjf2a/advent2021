@@ -1,18 +1,14 @@
-use std::{env, io};
-use advent_code_lib::all_lines;
+use std::io;
+use advent_code_lib::{all_lines, generic_main};
 use bits::BitArray;
 use num::BigUint;
 
 fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        println!("Usage: day3 filename");
-        Ok(())
-    } else {
+    generic_main("day3", &[], &[], |args| {
         let binary_nums: Vec<BitArray> = all_lines(args[1].as_str())?.map(|s| s.parse().unwrap()).collect();
         part1(&binary_nums)?;
         part2(&binary_nums)
-    }
+    })
 }
 
 fn part1(binary_nums: &Vec<BitArray>) -> io::Result<()> {
