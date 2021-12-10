@@ -60,6 +60,10 @@ impl ParsedLine {
         ParsedLine::Completion(completion_of(stack))
     }
 
+    // It would be great to auto-generate these methods.
+    // This crate is along those lines, but not quite what I need:
+    // https://github.com/alekratz/enum-methods
+
     fn corruption(&self) -> Option<(char, char, usize)> {
         match self {
             ParsedLine::Corruption(ex, ac, p) => Some((*ex, *ac, *p)),
