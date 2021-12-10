@@ -38,21 +38,21 @@ fn part_2(filename: &str) -> io::Result<usize> {
 
 #[derive(Debug, Clone)]
 enum AnalyzedLine {
-    Corrupt(char, char, usize),
+    Corruption(char, char, usize),
     Completion(String)
 }
 
 impl AnalyzedLine {
     fn corruption(&self) -> Option<(char, char, usize)> {
         match self {
-            AnalyzedLine::Corrupt(ex, ac, p) => Option::Some((*ex, *ac, *p)),
+            AnalyzedLine::Corruption(ex, ac, p) => Some((*ex, *ac, *p)),
             AnalyzedLine::Completion(_) => None
         }
     }
 
     fn completion(&self) -> Option<String> {
         match self {
-            AnalyzedLine::Corrupt(_, _, _) => None,
+            AnalyzedLine::Corruption(_, _, _) => None,
             AnalyzedLine::Completion(s) => Some(s.clone())
         }
     }
@@ -68,7 +68,7 @@ fn line_analysis(line: &str) -> AnalyzedLine {
             let expected = CLOSERS[index_of(popped, OPENERS.iter())];
             if c != expected {
                 let penalty = PENALTIES[index_of(c, CLOSERS.iter())];
-                return AnalyzedLine::Corrupt(expected, c, penalty);
+                return AnalyzedLine::Corruption(expected, c, penalty);
             }
         }
     }
@@ -109,7 +109,7 @@ mod tests {
         for (line, outcome) in [("{([(<{}[<>[]}>{[]{[(<()>", Some((']', '}')))] {
             match line_analysis(line) {
                 AnalyzedLine::Completion(_) => {assert_eq!(outcome, None);}
-                AnalyzedLine::Corrupt(expected, actual, penalty) => {
+                AnalyzedLine::Corruption(expected, actual, penalty) => {
                     let (outcome_expected, outcome_actual) = outcome.unwrap();
                     let outcome_penalty = PENALTIES[index_of(outcome_actual, CLOSERS.iter())];
                     assert_eq!(expected, outcome_expected);
