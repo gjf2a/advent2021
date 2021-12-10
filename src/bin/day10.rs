@@ -64,10 +64,10 @@ fn line_analysis(line: &str) -> AnalyzedLine {
             stack.push(c);
         } else {
             let popped = stack.pop().unwrap();
-            let popped_i = OPENERS.iter().position(|opener| *opener == popped).unwrap();
+            let popped_i = index_of(popped, OPENERS.iter());
             let expected = CLOSERS[popped_i];
             if c != expected {
-                let penalty = PENALTIES[CLOSERS.iter().position(|closer| *closer == c).unwrap()];
+                let penalty = PENALTIES[index_of(c, CLOSERS.iter())];
                 return AnalyzedLine::Corrupt(expected, c, penalty);
             }
         }
@@ -81,7 +81,7 @@ fn completion_of(mut stack: Vec<char>) -> String {
         match stack.pop() {
             None => return completion,
             Some(popped) => {
-                completion.push(CLOSERS[OPENERS.iter().position(|op| *op == popped).unwrap()]);
+                completion.push(CLOSERS[index_of(popped, OPENERS.iter())]);
             }
         }
     }
@@ -91,9 +91,13 @@ fn completion_score(completion: &str) -> usize {
     let mut result = 0;
     for c in completion.chars() {
         result *= 5;
-        result += 1 + CLOSERS.iter().position(|cl| *cl == c).unwrap();
+        result += 1 + index_of(c, CLOSERS.iter());
     }
     result
+}
+
+fn index_of<'a, I: Iterator<Item=&'a char>>(value: char, mut items: I) -> usize {
+    items.position(|item| *item == value).unwrap()
 }
 
 #[cfg(test)]
@@ -104,10 +108,10 @@ mod tests {
     fn test_corruption() {
         for (line, outcome) in [("{([(<{}[<>[]}>{[]{[(<()>", Some((']', '}')))] {
             match line_analysis(line) {
-                None => {assert_eq!(outcome, None);}
-                Some((expected, actual, penalty)) => {
+                AnalyzedLine::Completion(_) => {assert_eq!(outcome, None);}
+                AnalyzedLine::Corrupt(expected, actual, penalty) => {
                     let (outcome_expected, outcome_actual) = outcome.unwrap();
-                    let outcome_penalty = PENALTIES[CLOSERS.iter().position(|c| *c == outcome_actual).unwrap()];
+                    let outcome_penalty = PENALTIES[index_of(outcome_actual, CLOSERS.iter())];
                     assert_eq!(expected, outcome_expected);
                     assert_eq!(actual, outcome_actual);
                     assert_eq!(penalty, outcome_penalty);
