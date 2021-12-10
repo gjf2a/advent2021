@@ -64,8 +64,7 @@ fn line_analysis(line: &str) -> AnalyzedLine {
             stack.push(c);
         } else {
             let popped = stack.pop().unwrap();
-            let popped_i = index_of(popped, OPENERS.iter());
-            let expected = CLOSERS[popped_i];
+            let expected = CLOSERS[index_of(popped, OPENERS.iter())];
             if c != expected {
                 let penalty = PENALTIES[index_of(c, CLOSERS.iter())];
                 return AnalyzedLine::Corrupt(expected, c, penalty);
