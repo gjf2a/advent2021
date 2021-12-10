@@ -21,21 +21,43 @@ const PENALTIES: [usize; 4] = [3, 57, 1197, 25137];
 
 fn part_1(filename: &str) -> io::Result<usize> {
     Ok(all_lines(filename)?
-        .filter_map(|line| corrupted_line(line.as_str()))
+        .filter_map(|line| line_analysis(line.as_str()).corruption())
         .map(|(expected, actual, penalty)| penalty)
         .sum())
 }
 
 fn part_2(filename: &str) -> io::Result<usize> {
     let mut scores: Vec<usize> = all_lines(filename)?
-        .filter(|line| corrupted_line(line.as_str()).is_none())
-        .map(|line| completion_score(line_completion(line.as_str()).as_str()))
+        .filter_map(|line| line_analysis(line.as_str()).completion())
+        .map(|completion| completion_score(completion.as_str()))
         .collect();
     scores.sort();
     Ok(scores[scores.len() / 2])
 }
 
-fn corrupted_line(line: &str) -> Option<(char, char, usize)> {
+#[derive(Debug, Clone)]
+enum AnalyzedLine {
+    Corrupt(char, char, usize),
+    Completion(String)
+}
+
+impl AnalyzedLine {
+    fn corruption(&self) -> Option<(char, char, usize)> {
+        match self {
+            AnalyzedLine::Corrupt(ex, ac, p) => Option::Some((*ex, *ac, *p)),
+            AnalyzedLine::Completion(_) => None
+        }
+    }
+
+    fn completion(&self) -> Option<String> {
+        match self {
+            AnalyzedLine::Corrupt(_, _, _) => None,
+            AnalyzedLine::Completion(s) => Some(s.clone())
+        }
+    }
+}
+
+fn line_analysis(line: &str) -> AnalyzedLine {
     let mut stack = Vec::new();
     for c in line.chars() {
         if OPENERS.contains(&c) {
@@ -46,22 +68,27 @@ fn corrupted_line(line: &str) -> Option<(char, char, usize)> {
             let expected = CLOSERS[popped_i];
             if c != expected {
                 let penalty = PENALTIES[CLOSERS.iter().position(|closer| *closer == c).unwrap()];
-                return Some((expected, c, penalty));
+                return AnalyzedLine::Corrupt(expected, c, penalty);
             }
         }
     }
-    None
-}
-
-fn line_completion(incomplete: &str) -> String {
-    let mut result = String::new();
-
-    result
+    let mut completion = String::new();
+    loop {
+        match stack.pop() {
+            None => return AnalyzedLine::Completion(completion),
+            Some(popped) => {
+                completion.push(CLOSERS[OPENERS.iter().position(|op| *op == popped).unwrap()]);
+            }
+        }
+    }
 }
 
 fn completion_score(completion: &str) -> usize {
     let mut result = 0;
-
+    for c in completion.chars() {
+        result *= 5;
+        result += 1 + CLOSERS.iter().position(|cl| *cl == c).unwrap();
+    }
     result
 }
 
@@ -81,7 +108,7 @@ mod tests {
     #[test]
     fn test_corruption() {
         for (line, outcome) in [("{([(<{}[<>[]}>{[]{[(<()>", Some((']', '}')))] {
-            match corrupted_line(line) {
+            match line_analysis(line) {
                 None => {assert_eq!(outcome, None);}
                 Some((expected, actual, penalty)) => {
                     let (outcome_expected, outcome_actual) = outcome.unwrap();
