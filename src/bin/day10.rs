@@ -20,14 +20,6 @@ const CLOSERS: [char; 4] = [')', ']', '}', '>'];
 const PENALTIES: [usize; 4] = [3, 57, 1197, 25137];
 const COMPLETION_MULTIPLIER: usize = CLOSERS.len() + 1;
 
-fn closer_for(opener: char) -> char {
-    CLOSERS[index_of(opener, OPENERS.iter())]
-}
-
-fn penalty_for(closer: char) -> usize {
-    PENALTIES[index_of(closer, CLOSERS.iter())]
-}
-
 fn part_1(filename: &str) -> io::Result<usize> {
     Ok(all_lines(filename)?
         .filter_map(|line| ParsedLine::from(line.as_str()).corruption_score())
@@ -40,6 +32,22 @@ fn part_2(filename: &str) -> io::Result<usize> {
         .collect();
     scores.sort();
     Ok(scores[scores.len() / 2])
+}
+
+fn closer_for(opener: char) -> char {
+    parallel_in(opener, &OPENERS, &CLOSERS)
+}
+
+fn penalty_for(closer: char) -> usize {
+    parallel_in(closer, &CLOSERS, &PENALTIES)
+}
+
+fn parallel_in<V: Copy>(target: char, origin: &[char], destination: &[V]) -> V {
+    destination[index_of(target, origin.iter())]
+}
+
+fn index_of<'a, I: Iterator<Item=&'a char>>(value: char, mut items: I) -> usize {
+    items.position(|item| *item == value).unwrap()
 }
 
 #[derive(Debug, Clone)]
@@ -97,10 +105,6 @@ impl ParsedLine {
             }
         }
     }
-}
-
-fn index_of<'a, I: Iterator<Item=&'a char>>(value: char, mut items: I) -> usize {
-    items.position(|item| *item == value).unwrap()
 }
 
 #[cfg(test)]
