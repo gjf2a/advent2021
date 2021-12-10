@@ -22,14 +22,14 @@ const COMPLETION_MULTIPLIER: usize = CLOSERS.len() + 1;
 
 fn part_1(filename: &str) -> io::Result<usize> {
     Ok(all_lines(filename)?
-        .filter_map(|line| line_analysis(line.as_str()).corruption())
+        .filter_map(|line| ParsedLine::from(line.as_str()).corruption())
         .map(|(_, _, penalty)| penalty)
         .sum())
 }
 
 fn part_2(filename: &str) -> io::Result<usize> {
     let mut scores: Vec<usize> = all_lines(filename)?
-        .filter_map(|line| line_analysis(line.as_str()).completion())
+        .filter_map(|line| ParsedLine::from(line.as_str()).completion())
         .map(|completion| completion_score(completion.as_str()))
         .collect();
     scores.sort();
@@ -37,42 +37,42 @@ fn part_2(filename: &str) -> io::Result<usize> {
 }
 
 #[derive(Debug, Clone)]
-enum AnalyzedLine {
+enum ParsedLine {
     Corruption(char, char, usize),
     Completion(String)
 }
 
-impl AnalyzedLine {
+impl ParsedLine {
+    fn from(line: &str) -> Self {
+        let mut stack = Vec::new();
+        for c in line.chars() {
+            if OPENERS.contains(&c) {
+                stack.push(c);
+            } else {
+                let popped = stack.pop().unwrap();
+                let expected = CLOSERS[index_of(popped, OPENERS.iter())];
+                if c != expected {
+                    let penalty = PENALTIES[index_of(c, CLOSERS.iter())];
+                    return ParsedLine::Corruption(expected, c, penalty);
+                }
+            }
+        }
+        ParsedLine::Completion(completion_of(stack))
+    }
+
     fn corruption(&self) -> Option<(char, char, usize)> {
         match self {
-            AnalyzedLine::Corruption(ex, ac, p) => Some((*ex, *ac, *p)),
-            AnalyzedLine::Completion(_) => None
+            ParsedLine::Corruption(ex, ac, p) => Some((*ex, *ac, *p)),
+            ParsedLine::Completion(_) => None
         }
     }
 
     fn completion(&self) -> Option<String> {
         match self {
-            AnalyzedLine::Corruption(_, _, _) => None,
-            AnalyzedLine::Completion(s) => Some(s.clone())
+            ParsedLine::Corruption(_, _, _) => None,
+            ParsedLine::Completion(s) => Some(s.clone())
         }
     }
-}
-
-fn line_analysis(line: &str) -> AnalyzedLine {
-    let mut stack = Vec::new();
-    for c in line.chars() {
-        if OPENERS.contains(&c) {
-            stack.push(c);
-        } else {
-            let popped = stack.pop().unwrap();
-            let expected = CLOSERS[index_of(popped, OPENERS.iter())];
-            if c != expected {
-                let penalty = PENALTIES[index_of(c, CLOSERS.iter())];
-                return AnalyzedLine::Corruption(expected, c, penalty);
-            }
-        }
-    }
-    AnalyzedLine::Completion(completion_of(stack))
 }
 
 fn completion_of(mut stack: Vec<char>) -> String {
@@ -108,8 +108,8 @@ mod tests {
     fn test_corruption() {
         for (line, outcome) in [("{([(<{}[<>[]}>{[]{[(<()>", Some((']', '}')))] {
             match line_analysis(line) {
-                AnalyzedLine::Completion(_) => {assert_eq!(outcome, None);}
-                AnalyzedLine::Corruption(expected, actual, penalty) => {
+                ParsedLine::Completion(_) => {assert_eq!(outcome, None);}
+                ParsedLine::Corruption(expected, actual, penalty) => {
                     let (outcome_expected, outcome_actual) = outcome.unwrap();
                     let outcome_penalty = PENALTIES[index_of(outcome_actual, CLOSERS.iter())];
                     assert_eq!(expected, outcome_expected);
