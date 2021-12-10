@@ -18,6 +18,7 @@ fn main() -> io::Result<()> {
 const OPENERS: [char; 4] = ['(', '[', '{', '<'];
 const CLOSERS: [char; 4] = [')', ']', '}', '>'];
 const PENALTIES: [usize; 4] = [3, 57, 1197, 25137];
+const COMPLETION_MULTIPLIER: usize = CLOSERS.len() + 1;
 
 fn part_1(filename: &str) -> io::Result<usize> {
     Ok(all_lines(filename)?
@@ -89,7 +90,7 @@ fn completion_of(mut stack: Vec<char>) -> String {
 fn completion_score(completion: &str) -> usize {
     let mut result = 0;
     for c in completion.chars() {
-        result *= 5;
+        result *= COMPLETION_MULTIPLIER;
         result += 1 + index_of(c, CLOSERS.iter());
     }
     result
