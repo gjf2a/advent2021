@@ -22,15 +22,14 @@ const COMPLETION_MULTIPLIER: usize = CLOSERS.len() + 1;
 
 fn part_1(filename: &str) -> io::Result<usize> {
     Ok(all_lines(filename)?
-        .filter_map(|line| ParsedLine::from(line.as_str()).corruption())
-        .map(|(_, _, penalty)| penalty)
+        .map(|line| ParsedLine::from(line.as_str()).corruption_score())
         .sum())
 }
 
 fn part_2(filename: &str) -> io::Result<usize> {
     let mut scores: Vec<usize> = all_lines(filename)?
-        .filter_map(|line| ParsedLine::from(line.as_str()).completion())
-        .map(|completion| completion_score(completion.as_str()))
+        .map(|line| ParsedLine::from(line.as_str()).completion_score())
+        .filter(|score| *score != 0)
         .collect();
     scores.sort();
     Ok(scores[scores.len() / 2])
@@ -57,47 +56,41 @@ impl ParsedLine {
                 }
             }
         }
-        ParsedLine::Completion(completion_of(stack))
+        ParsedLine::Completion(ParsedLine::completion_of(stack))
     }
 
-    // It would be great to auto-generate these methods.
-    // This crate is along those lines, but not quite what I need:
-    // https://github.com/alekratz/enum-methods
-
-    fn corruption(&self) -> Option<(char, char, usize)> {
+    fn corruption_score(&self) -> usize {
         match self {
-            ParsedLine::Corruption(ex, ac, p) => Some((*ex, *ac, *p)),
-            ParsedLine::Completion(_) => None
+            ParsedLine::Corruption(_, _, p) => *p,
+            ParsedLine::Completion(_) => 0
         }
     }
 
-    fn completion(&self) -> Option<String> {
+    fn completion_score(&self) -> usize {
         match self {
-            ParsedLine::Corruption(_, _, _) => None,
-            ParsedLine::Completion(s) => Some(s.clone())
-        }
-    }
-}
-
-fn completion_of(mut stack: Vec<char>) -> String {
-    let mut completion = String::new();
-    loop {
-        match stack.pop() {
-            None => return completion,
-            Some(popped) => {
-                completion.push(CLOSERS[index_of(popped, OPENERS.iter())]);
+            ParsedLine::Corruption(_, _, _) => 0,
+            ParsedLine::Completion(s) => {
+                let mut result = 0;
+                for c in s.chars() {
+                    result *= COMPLETION_MULTIPLIER;
+                    result += 1 + index_of(c, CLOSERS.iter());
+                }
+                result
             }
         }
     }
-}
 
-fn completion_score(completion: &str) -> usize {
-    let mut result = 0;
-    for c in completion.chars() {
-        result *= COMPLETION_MULTIPLIER;
-        result += 1 + index_of(c, CLOSERS.iter());
+    fn completion_of(mut stack: Vec<char>) -> String {
+        let mut completion = String::new();
+        loop {
+            match stack.pop() {
+                None => return completion,
+                Some(popped) => {
+                    completion.push(CLOSERS[index_of(popped, OPENERS.iter())]);
+                }
+            }
+        }
     }
-    result
 }
 
 fn index_of<'a, I: Iterator<Item=&'a char>>(value: char, mut items: I) -> usize {
