@@ -22,7 +22,7 @@ const PENALTIES: [usize; 4] = [3, 57, 1197, 25137];
 fn part_1(filename: &str) -> io::Result<usize> {
     Ok(all_lines(filename)?
         .filter_map(|line| line_analysis(line.as_str()).corruption())
-        .map(|(expected, actual, penalty)| penalty)
+        .map(|(_, _, penalty)| penalty)
         .sum())
 }
 
@@ -72,10 +72,14 @@ fn line_analysis(line: &str) -> AnalyzedLine {
             }
         }
     }
+    AnalyzedLine::Completion(completion_of(stack))
+}
+
+fn completion_of(mut stack: Vec<char>) -> String {
     let mut completion = String::new();
     loop {
         match stack.pop() {
-            None => return AnalyzedLine::Completion(completion),
+            None => return completion,
             Some(popped) => {
                 completion.push(CLOSERS[OPENERS.iter().position(|op| *op == popped).unwrap()]);
             }
@@ -90,15 +94,6 @@ fn completion_score(completion: &str) -> usize {
         result += 1 + CLOSERS.iter().position(|cl| *cl == c).unwrap();
     }
     result
-}
-
-fn report_corruption(result: Option<(char,char,usize)>) {
-    match result {
-        None => {println!("Line not corrupt")}
-        Some((expected, actual, penalty)) => {
-            println!("Expected {}, but found {} instead. Penalty: {}", expected, actual, penalty);
-        }
-    }
 }
 
 #[cfg(test)]
