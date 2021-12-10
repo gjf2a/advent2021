@@ -6,9 +6,9 @@ fn main() -> io::Result<()> {
         let filename = args[1].as_str();
         let part = args[2].as_str();
         let score = match part {
-            "1" => {part_1(filename)}
-            "2" => {part_2(filename)}
-            bad => {panic!("Illegal option {}", bad);}
+            "1" => part_1(filename),
+            "2" => part_2(filename),
+            bad => panic!("Illegal option {}", bad)
         }?;
         println!("Part {} score: {}", part, score);
         Ok(())
