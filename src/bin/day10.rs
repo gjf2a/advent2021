@@ -22,14 +22,13 @@ const COMPLETION_MULTIPLIER: usize = CLOSERS.len() + 1;
 
 fn part_1(filename: &str) -> io::Result<usize> {
     Ok(all_lines(filename)?
-        .map(|line| ParsedLine::from(line.as_str()).corruption_score())
+        .filter_map(|line| ParsedLine::from(line.as_str()).corruption_score())
         .sum())
 }
 
 fn part_2(filename: &str) -> io::Result<usize> {
     let mut scores: Vec<usize> = all_lines(filename)?
-        .map(|line| ParsedLine::from(line.as_str()).completion_score())
-        .filter(|score| *score != 0)
+        .filter_map(|line| ParsedLine::from(line.as_str()).completion_score())
         .collect();
     scores.sort();
     Ok(scores[scores.len() / 2])
@@ -59,23 +58,23 @@ impl ParsedLine {
         ParsedLine::Completion(ParsedLine::completion_of(stack))
     }
 
-    fn corruption_score(&self) -> usize {
+    fn corruption_score(&self) -> Option<usize> {
         match self {
-            ParsedLine::Corruption(_, _, p) => *p,
-            ParsedLine::Completion(_) => 0
+            ParsedLine::Corruption(_, _, p) => Some(*p),
+            ParsedLine::Completion(_) => None
         }
     }
 
-    fn completion_score(&self) -> usize {
+    fn completion_score(&self) -> Option<usize> {
         match self {
-            ParsedLine::Corruption(_, _, _) => 0,
+            ParsedLine::Corruption(_, _, _) => None,
             ParsedLine::Completion(s) => {
                 let mut result = 0;
                 for c in s.chars() {
                     result *= COMPLETION_MULTIPLIER;
                     result += 1 + index_of(c, CLOSERS.iter());
                 }
-                result
+                Some(result)
             }
         }
     }
