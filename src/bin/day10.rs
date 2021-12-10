@@ -20,6 +20,14 @@ const CLOSERS: [char; 4] = [')', ']', '}', '>'];
 const PENALTIES: [usize; 4] = [3, 57, 1197, 25137];
 const COMPLETION_MULTIPLIER: usize = CLOSERS.len() + 1;
 
+fn closer_for(opener: char) -> char {
+    CLOSERS[index_of(opener, OPENERS.iter())]
+}
+
+fn penalty_for(closer: char) -> usize {
+    PENALTIES[index_of(closer, CLOSERS.iter())]
+}
+
 fn part_1(filename: &str) -> io::Result<usize> {
     Ok(all_lines(filename)?
         .filter_map(|line| ParsedLine::from(line.as_str()).corruption_score())
@@ -48,14 +56,25 @@ impl ParsedLine {
                 stack.push(c);
             } else {
                 let popped = stack.pop().unwrap();
-                let expected = CLOSERS[index_of(popped, OPENERS.iter())];
+                let expected = closer_for(popped);
                 if c != expected {
-                    let penalty = PENALTIES[index_of(c, CLOSERS.iter())];
-                    return ParsedLine::Corruption(expected, c, penalty);
+                    return ParsedLine::Corruption(expected, c, penalty_for(c));
                 }
             }
         }
         ParsedLine::Completion(ParsedLine::completion_of(stack))
+    }
+
+    fn completion_of(mut stack: Vec<char>) -> String {
+        let mut completion = String::new();
+        loop {
+            match stack.pop() {
+                None => return completion,
+                Some(popped) => {
+                    completion.push(closer_for(popped));
+                }
+            }
+        }
     }
 
     fn corruption_score(&self) -> Option<usize> {
@@ -78,18 +97,6 @@ impl ParsedLine {
             }
         }
     }
-
-    fn completion_of(mut stack: Vec<char>) -> String {
-        let mut completion = String::new();
-        loop {
-            match stack.pop() {
-                None => return completion,
-                Some(popped) => {
-                    completion.push(CLOSERS[index_of(popped, OPENERS.iter())]);
-                }
-            }
-        }
-    }
 }
 
 fn index_of<'a, I: Iterator<Item=&'a char>>(value: char, mut items: I) -> usize {
@@ -103,11 +110,11 @@ mod tests {
     #[test]
     fn test_corruption() {
         for (line, outcome) in [("{([(<{}[<>[]}>{[]{[(<()>", Some((']', '}')))] {
-            match line_analysis(line) {
+            match ParsedLine::from(line) {
                 ParsedLine::Completion(_) => {assert_eq!(outcome, None);}
                 ParsedLine::Corruption(expected, actual, penalty) => {
                     let (outcome_expected, outcome_actual) = outcome.unwrap();
-                    let outcome_penalty = PENALTIES[index_of(outcome_actual, CLOSERS.iter())];
+                    let outcome_penalty = penalty_for(outcome_actual);
                     assert_eq!(expected, outcome_expected);
                     assert_eq!(actual, outcome_actual);
                     assert_eq!(penalty, outcome_penalty);
