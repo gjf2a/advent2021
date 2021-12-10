@@ -99,11 +99,9 @@ impl FromStr for LineSegment {
     type Err = io::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // Consider removing the unwrap() later.
         let parsed = s.split(" -> ")
             .map(|s| s.parse::<Position>())
-            .collect::<Result<Vec<Position>, io::Error>>()
-            .unwrap();
+            .collect::<Result<Vec<Position>, io::Error>>()?;
         Ok(LineSegment { start: parsed[0], end: parsed[1]})
     }
 }
