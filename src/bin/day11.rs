@@ -2,7 +2,7 @@ use std::cmp::max;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::{Display, Formatter};
 use std::io;
-use advent_code_lib::{all_lines, generic_main, Position, RowMajorPositionIterator};
+use advent_code_lib::{all_lines, generic_main, Position, RowMajorPositionIterator, search};
 use bare_metal_modulo::{MNum, ModNumC};
 
 fn main() -> io::Result<()> {
@@ -76,15 +76,13 @@ impl DumboOctopi {
             .map(|(p, _)| *p)
     }
 
-    fn enqueue_flashed_neighbors(&mut self, flasher: Position, queue: &mut VecDeque<Position>,
-                                 flash_count: &mut usize) {
+    fn enqueue_flashed_neighbors(&mut self, flasher: Position, queue: &mut VecDeque<Position>) {
         for neighbor in flasher.neighbors() {
             if let Some(neighbor_energy) = self.energies.get_mut(&neighbor) {
                 if *neighbor_energy > 0 {
                     *neighbor_energy += 1;
                     if *neighbor_energy == 0 {
                         queue.push_back(neighbor);
-                        *flash_count += 1;
                     }
                 }
             }
@@ -103,16 +101,10 @@ impl Iterator for DumboOctopi {
         for (_, energy) in self.energies.iter_mut() {
             *energy += 1;
         }
-        let mut queue: VecDeque<Position> = self.just_flashed().collect();
-        let mut flashes = queue.len();
-        loop {
-            match queue.pop_front() {
-                None => return Some(flashes),
-                Some(flasher) => {
-                    self.enqueue_flashed_neighbors(flasher, &mut queue, &mut flashes);
-                }
-            }
-        }
+
+        let result = search(self.just_flashed().collect(),
+                            |flasher, q| self.enqueue_flashed_neighbors(*flasher, q));
+        Some(*result.dequeued())
     }
 }
 
