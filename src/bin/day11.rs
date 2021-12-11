@@ -75,20 +75,18 @@ impl DumboOctopi {
             .map(|(p, _)| *p)
     }
 
-    fn enqueue_flashed_neighbors(&mut self, flasher: Position, queue: &mut VecDeque<Position>) -> usize {
-        let mut count = 0;
+    fn enqueue_flashed_neighbors(&mut self, flasher: Position, queue: &mut VecDeque<Position>, flash_count: &mut usize) {
         for neighbor in flasher.neighbors() {
             if let Some(neighbor_energy) = self.energies.get_mut(&neighbor) {
                 if *neighbor_energy != 0 {
                     *neighbor_energy += 1;
                     if *neighbor_energy == 0 {
                         queue.push_back(neighbor);
-                        count += 1;
+                        *flash_count += 1;
                     }
                 }
             }
         }
-        count
     }
 
     fn len(&self) -> usize {
@@ -119,7 +117,7 @@ impl Iterator for DumboOctopi {
             match queue.pop_front() {
                 None => return Some(flashes),
                 Some(flasher) => {
-                    flashes += self.enqueue_flashed_neighbors(flasher, &mut queue);
+                    self.enqueue_flashed_neighbors(flasher, &mut queue, &mut flashes);
                 }
             }
         }
