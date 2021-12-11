@@ -69,6 +69,28 @@ impl DumboOctopi {
         Ok(DumboOctopi {energies, width, height})
     }
 
+    fn just_flashed(&self) -> impl Iterator<Item=Position> + '_ {
+        self.energies.iter()
+            .filter(|(_, energy)| **energy == 0)
+            .map(|(p, _)| *p)
+    }
+
+    fn enqueue_flashed_neighbors(&mut self, flasher: Position, queue: &mut VecDeque<Position>) -> usize {
+        let mut count = 0;
+        for neighbor in flasher.neighbors() {
+            if let Some(neighbor_energy) = self.energies.get_mut(&neighbor) {
+                if *neighbor_energy != 0 {
+                    *neighbor_energy += 1;
+                    if *neighbor_energy == 0 {
+                        queue.push_back(neighbor);
+                        count += 1;
+                    }
+                }
+            }
+        }
+        count
+    }
+
     fn len(&self) -> usize {
         self.energies.len()
     }
@@ -91,26 +113,13 @@ impl Iterator for DumboOctopi {
         for (_, energy) in self.energies.iter_mut() {
             *energy += 1;
         }
-        let mut queue: VecDeque<Position> = self.energies.iter()
-            .filter(|(_, energy)| **energy == 0)
-            .map(|(p, _)| *p)
-            .collect();
+        let mut queue: VecDeque<Position> = self.just_flashed().collect();
         let mut flashes = queue.len();
         loop {
             match queue.pop_front() {
                 None => return Some(flashes),
                 Some(flasher) => {
-                    for neighbor in flasher.neighbors() {
-                        if let Some(neighbor_energy) = self.energies.get_mut(&neighbor) {
-                            if *neighbor_energy != 0 {
-                                *neighbor_energy += 1;
-                                if *neighbor_energy == 0 {
-                                    queue.push_front(neighbor);
-                                    flashes += 1;
-                                }
-                            }
-                        }
-                    }
+                    flashes += self.enqueue_flashed_neighbors(flasher, &mut queue);
                 }
             }
         }
