@@ -102,9 +102,9 @@ impl Iterator for DumboOctopi {
                 Some(flasher) => {
                     for neighbor in flasher.neighbors() {
                         if let Some(neighbor_energy) = self.energies.get_mut(&neighbor) {
-                            if neighbor_energy != &0 {
+                            if *neighbor_energy != 0 {
                                 *neighbor_energy += 1;
-                                if neighbor_energy == &0 {
+                                if *neighbor_energy == 0 {
                                     queue.push_front(neighbor);
                                     flashes += 1;
                                 }
