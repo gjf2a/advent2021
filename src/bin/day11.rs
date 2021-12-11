@@ -74,7 +74,8 @@ impl DumboOctopi {
             .map(|(p, _)| *p)
     }
 
-    fn enqueue_flashed_neighbors(&mut self, flasher: Position, queue: &mut VecDeque<Position>, flash_count: &mut usize) {
+    fn enqueue_flashed_neighbors(&mut self, flasher: Position, queue: &mut VecDeque<Position>,
+                                 flash_count: &mut usize) {
         for neighbor in flasher.neighbors() {
             if let Some(neighbor_energy) = self.energies.get_mut(&neighbor) {
                 if *neighbor_energy != 0 {
