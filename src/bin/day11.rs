@@ -43,7 +43,6 @@ fn show_steps(mut octopi: DumboOctopi, steps: usize) {
         println!("{}", octopi);
         println!();
     }
-
 }
 
 #[derive(Clone, Debug)]
