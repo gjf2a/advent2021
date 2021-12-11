@@ -94,16 +94,6 @@ impl DumboOctopi {
     }
 }
 
-impl Display for DumboOctopi {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for p in RowMajorPositionIterator::new(self.width, self.height) {
-            if p.col == 0 && p.row > 0 {writeln!(f)?;}
-            write!(f, "{}", self.energies.get(&p).unwrap().a())?
-        }
-        Ok(())
-    }
-}
-
 impl Iterator for DumboOctopi {
     type Item = usize;
 
@@ -121,5 +111,15 @@ impl Iterator for DumboOctopi {
                 }
             }
         }
+    }
+}
+
+impl Display for DumboOctopi {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for p in RowMajorPositionIterator::new(self.width, self.height) {
+            if p.col == 0 && p.row > 0 {writeln!(f)?;}
+            write!(f, "{}", self.energies.get(&p).unwrap().a())?
+        }
+        Ok(())
     }
 }
