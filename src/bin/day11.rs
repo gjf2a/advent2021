@@ -11,6 +11,7 @@ fn main() -> io::Result<()> {
         match args.iter().find(|arg| arg.starts_with("-show")) {
             None => {
                 println!("Part 1 score: {}", part_1(octopi.clone()));
+                println!("Part 2 score: {}", part_2(octopi));
             }
             Some(show_step) => {
                 let steps: usize = show_step.split(':').nth(1).unwrap().parse().unwrap();
@@ -23,6 +24,12 @@ fn main() -> io::Result<()> {
 
 fn part_1(octopi: DumboOctopi) -> usize {
     octopi.take(100).sum()
+}
+
+fn part_2(octopi: DumboOctopi) -> usize {
+    let target_flashes = octopi.len();
+    1 + octopi.enumerate().find(|(_, flashes)| *flashes == target_flashes)
+        .map(|(step, _)| step).unwrap()
 }
 
 fn show_steps(mut octopi: DumboOctopi, steps: usize) {
@@ -60,6 +67,10 @@ impl DumboOctopi {
                     height = max(height, row + 1);
                 }));
         Ok(DumboOctopi {energies, width, height})
+    }
+
+    fn len(&self) -> usize {
+        self.energies.len()
     }
 }
 
