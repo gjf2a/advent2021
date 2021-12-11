@@ -22,8 +22,10 @@ fn main() -> io::Result<()> {
     })
 }
 
+const PART_1_ITERATIONS: usize = 100;
+
 fn part_1(octopi: DumboOctopi) -> usize {
-    octopi.take(100).sum()
+    octopi.take(PART_1_ITERATIONS).sum()
 }
 
 fn part_2(octopi: DumboOctopi) -> usize {
