@@ -6,7 +6,7 @@ use advent_code_lib::{all_lines, generic_main, Position, RowMajorPositionIterato
 use bare_metal_modulo::{MNum, ModNumC};
 
 fn main() -> io::Result<()> {
-    generic_main("day9", &[], &["-show:num_steps"], |args| {
+    generic_main("day11", &[], &["-show:num_steps"], |args| {
         let octopi = DumboOctopi::new(args[1].as_str())?;
         match args.iter().find(|arg| arg.starts_with("-show")) {
             None => {
