@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, VecDeque};
 use std::io;
-use advent_code_lib::{AdjacencySets, all_lines, Arena, breadth_first_search, generic_main, path_back_from, search, SearchQueue};
+use advent_code_lib::{AdjacencySets, all_lines, Arena, breadth_first_search, generic_main, search, SearchQueue};
 
 // NOTE:
 // * No big cave is ever connected to another big cave!
@@ -13,20 +13,9 @@ const END: &'static str = "end";
 fn main() -> io::Result<()> {
     generic_main("day12", &[], &[], |args| {
         let graph = build_graph_from(args[1].as_str())?;
-        let primary_map = bfs(START, &graph);
-        for key in graph.keys() {
-            let pm = bfs(key, &graph);
-            let mut path = path_back_from(&key.to_string(), &primary_map);
-            let mut path_suffix = path_back_from(&"end".to_string(), &pm);
-            path_suffix.pop_front();
-            loop {
-                match path_suffix.pop_front() {
-                    None => break,
-                    Some(node) => path.push_back(node)
-                }
-            }
-            println!("{:?}", path);
-        }
+        let table = PathTable::new(&graph);
+        println!("{:?}", table);
+        println!("Part 1: {}", table.total_path_count_to(END));
         Ok(())
     })
 }
@@ -40,14 +29,7 @@ fn build_graph_from(filename: &str) -> io::Result<AdjacencySets> {
     Ok(graph)
 }
 
-fn bfs(node: &str, graph: &AdjacencySets) -> BTreeMap<String,Option<String>> {
-    breadth_first_search(&node.to_string(),
-                         |node, q| graph.neighbors_of(node).unwrap().iter().for_each(|n| q.enqueue(n)))
-}
-
-// New idea:
-//
-
+#[derive(Debug, Clone)]
 struct PathTable {
     table: Vec<BTreeMap<String,Vec<usize>>>,
     arena: Arena<String>
@@ -63,7 +45,7 @@ impl PathTable {
             let parent_paths = parent.clone().map(|p| table[*level - 1].get(p.as_str()).unwrap());
             let paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths, &mut arena);
             if paths_to.len() > 0 {
-                if table.len() + 1 == *level {
+                if table.len() == *level {
                     table.push(BTreeMap::new());
                 }
                 table[*level].insert(node.clone(), paths_to);
@@ -92,5 +74,9 @@ impl PathTable {
                 all_paths
             }
         }
+    }
+
+    fn total_path_count_to(&self, node: &str) -> usize {
+        self.table.last().unwrap().get(node).unwrap().len()
     }
 }
