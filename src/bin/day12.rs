@@ -1,6 +1,7 @@
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::io;
-use advent_code_lib::{AdjacencySets, all_lines, Arena, breadth_first_search, generic_main, search, SearchQueue};
+use advent_code_lib::{AdjacencySets, all_lines, Arena, generic_main, search, SearchQueue};
+use common_macros::b_tree_set;
 
 // NOTE:
 // * No big cave is ever connected to another big cave!
@@ -17,9 +18,14 @@ fn main() -> io::Result<()> {
         let table = PathTable::new(&graph);
         if let Some(arg) = args.get(2) {
             if arg.as_str() == SHOW_PATH_ARG {
+                let mut unique = BTreeSet::new();
                 for path in table.all_paths_to(END) {
-                    println!("{:?}", path);
+                    unique.insert(format!("{:?}", path));
                 }
+                for path in unique.iter() {
+                    println!("{}", path);
+                }
+                println!("unique: {}", unique.len());
             }
         }
         println!("Part 1: {}", table.total_path_count_to(END));
@@ -38,24 +44,28 @@ fn build_graph_from(filename: &str) -> io::Result<AdjacencySets> {
 
 #[derive(Debug, Clone)]
 struct PathTable {
-    table: Vec<BTreeMap<String,Vec<usize>>>,
+    table: Vec<BTreeMap<String,BTreeSet<usize>>>,
     arena: Arena<String>
 }
 
 impl PathTable {
     fn new(graph: &AdjacencySets) -> Self {
-        let mut table: Vec<BTreeMap<String,Vec<usize>>> = Vec::new();
+        let mut table: Vec<BTreeMap<String,BTreeSet<usize>>> = Vec::new();
         let mut arena = Arena::new();
         let mut open_list = VecDeque::new();
         open_list.push_back((0, START.to_string(), None));
         search(open_list, |(level, node, parent): &(usize, String, Option<String>), q| {
             let parent_paths = parent.clone().map(|p| table[*level - 1].get(p.as_str()).unwrap());
-            let paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths, &mut arena);
+            let mut paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths, &mut arena);
             if paths_to.len() > 0 {
                 if table.len() == *level {
                     table.push(BTreeMap::new());
                 }
-                table[*level].insert(node.clone(), paths_to);
+                match table[*level].get_mut(node) {
+                    None => {table[*level].insert(node.clone(), paths_to);}
+                    Some(paths) => {paths.append(&mut paths_to);}
+                }
+
                 if node.as_str() != END {
                     for neighbor in graph.neighbors_of(node.as_str()).unwrap() {
                         q.enqueue(&(level + 1, neighbor.clone(), Some(node.clone())));
@@ -67,10 +77,10 @@ impl PathTable {
         PathTable {table, arena}
     }
 
-    fn make_paths_for(node: &str, parent_paths: &Option<&Vec<usize>>, arena: &mut Arena<String>) -> Vec<usize> {
+    fn make_paths_for(node: &str, parent_paths: &Option<&BTreeSet<usize>>, arena: &mut Arena<String>) -> BTreeSet<usize> {
         match parent_paths {
             None => {
-                vec![arena.alloc(node.to_string(), None)]
+                b_tree_set![arena.alloc(node.to_string(), None)]
             }
             Some(parent_paths) => {
                 let can_repeat = node.chars().any(|c| c.is_uppercase());
