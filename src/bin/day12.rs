@@ -9,12 +9,19 @@ use advent_code_lib::{AdjacencySets, all_lines, Arena, breadth_first_search, gen
 
 const START: &'static str = "start";
 const END: &'static str = "end";
+const SHOW_PATH_ARG: &'static str = "-show-paths";
 
 fn main() -> io::Result<()> {
-    generic_main("day12", &[], &[], |args| {
+    generic_main("day12", &[], &[SHOW_PATH_ARG], |args| {
         let graph = build_graph_from(args[1].as_str())?;
         let table = PathTable::new(&graph);
-        println!("{:?}", table);
+        if let Some(arg) = args.get(2) {
+            if arg.as_str() == SHOW_PATH_ARG {
+                for path in table.all_paths_to(END) {
+                    println!("{:?}", path);
+                }
+            }
+        }
         println!("Part 1: {}", table.total_path_count_to(END));
         Ok(())
     })
@@ -67,16 +74,31 @@ impl PathTable {
             }
             Some(parent_paths) => {
                 let can_repeat = node.chars().any(|c| c.is_uppercase());
-                let mut all_paths: Vec<usize> = parent_paths.iter()
-                    .map(|addr| arena.alloc(node.to_string(), Some(*addr)))
+                let path_prefixes: Vec<&usize> = parent_paths.iter()
+                    .filter(|addr| can_repeat || !arena.get(**addr).iter(arena).any(|s| s.as_str() == node))
                     .collect();
-                all_paths.retain(|alloc_addr| can_repeat || !arena.get(*alloc_addr).iter(arena).any(|s| s.as_str() == node));
-                all_paths
+                path_prefixes.iter()
+                    .map(|addr| arena.alloc(node.to_string(), Some(**addr)))
+                    .collect()
             }
         }
     }
 
+    fn all_paths_to(&self, node: &str) -> Vec<Vec<String>> {
+        let mut result = Vec::new();
+        for row in self.table.iter() {
+            if let Some(row) = row.get(node) {
+                for path_end in row.iter() {
+                    let mut path = self.arena.get(*path_end).iter(&self.arena).collect::<Vec<_>>();
+                    path.reverse();
+                    result.push(path.iter().map(|s| (*s).clone()).collect());
+                }
+            }
+        }
+        result
+    }
+
     fn total_path_count_to(&self, node: &str) -> usize {
-        self.table.last().unwrap().get(node).unwrap().len()
+        self.all_paths_to(node).len()
     }
 }
