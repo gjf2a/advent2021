@@ -44,18 +44,17 @@ fn show(paths: &Vec<Vec<String>>) {
 fn all_paths(graph: &AdjacencySets, rule: Rule) -> Vec<Vec<String>> {
     let mut all_paths = Vec::new();
     let mut arena = Arena::new();
-    let mut stack: ParentMapQueue<(usize, usize, Option<usize>), Vec<(usize, usize, Option<usize>)>> = ParentMapQueue::new();
-    stack.enqueue(&(arena.alloc(START.to_string(), None), 1, None));
-    search(stack, |(node, count, parent): &(usize, usize, Option<usize>), stack| {
+    let mut stack: ParentMapQueue<(usize, Option<usize>), Vec<(usize, Option<usize>)>> = ParentMapQueue::new();
+    stack.enqueue(&(arena.alloc(START.to_string(), None), None));
+    search(stack, |(node, parent), stack| {
         let last_name = arena.get(*node).get().as_str();
-        if rule.allows(&arena, last_name, *count, *parent) {
+        if rule.allows(&arena, last_name, *parent) {
             if last_name == END {
                 all_paths.push(path_at_addr(&arena, *node));
             } else {
                 for neighbor in graph.neighbors_of(last_name).unwrap() {
                     let new_addr = arena.alloc(neighbor.clone(), Some(*node));
-                    let new_count = 1 + arena.get(*node).iter(&arena).filter(|n| n.as_str() == neighbor.as_str()).count();
-                    stack.enqueue(&(new_addr, new_count, Some(*node)));
+                    stack.enqueue(&(new_addr, Some(*node)));
                 }
             }
         }
@@ -75,12 +74,11 @@ enum Rule {
 }
 
 impl Rule {
-    fn allows(&self, arena: &Arena<String>, node: &str, count: usize, parent: Option<usize>) -> bool {
+    fn allows(&self, arena: &Arena<String>, node: &str, parent: Option<usize>) -> bool {
         match parent {
             None => true,
             Some(parent_addr) => {
                 let mut path_counts: HashHistogram<String> = arena.get(parent_addr).iter(arena).collect();
-                assert_eq!(count, 1 + path_counts.count(&node.to_string()));
                 path_counts.bump(&node.to_string());
                 let mut potential_problems = path_counts.iter()
                     .filter(|(s, c)| !has_upper(s.as_str()) && **c > 1);
