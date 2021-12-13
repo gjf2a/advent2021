@@ -35,4 +35,36 @@ impl FoldInstruction {
             bad => panic!("Unknown pattern: {}", bad)
         }
     }
+
+    fn remapped_value(fold_point: isize, original: isize) -> isize {
+        if original > fold_point {
+            2 * fold_point - original
+        } else {
+            original
+        }
+    }
+
+    fn folded_point(&self, p: Position) -> Position {
+        Position::from(match self {
+            FoldInstruction::Horizontal(y_fold) =>
+                (p.col, FoldInstruction::remapped_value(*y_fold, p.row)),
+            FoldInstruction::Vertical(x_fold) =>
+                (FoldInstruction::remapped_value(*x_fold, p.col), p.row)
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use advent_code_lib::Position;
+    use crate::FoldInstruction;
+
+    #[test]
+    fn test() {
+        for (old, folder, folded) in [
+            ((6, 10), FoldInstruction::Horizontal(7), (6, 4))
+        ] {
+            assert_eq!(Position::from(folded), folder.folded_point(Position::from(old)));
+        }
+    }
 }
