@@ -1,7 +1,7 @@
-use std::collections::{BTreeMap, BTreeSet, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Display, Formatter};
 use std::io;
-use advent_code_lib::{AdjacencySets, all_lines, Arena, generic_main, search, SearchQueue};
+use advent_code_lib::{AdjacencySets, all_lines, Arena, breadth_first_search, generic_main, SearchQueue};
 use common_macros::b_tree_set;
 use hash_histogram::HashHistogram;
 
@@ -9,7 +9,6 @@ use hash_histogram::HashHistogram;
 // * No big cave is ever connected to another big cave!
 // * If 2 big caves were connected, you could bounce between them indefinitely, leading
 //   to an infinite number of paths.
-
 
 const START: &'static str = "start";
 const END: &'static str = "end";
@@ -57,27 +56,21 @@ impl PathTable {
     fn new(graph: &AdjacencySets, allow_extra_small: bool) -> Self {
         let mut table: Vec<BTreeMap<String,BTreeSet<usize>>> = Vec::new();
         let mut arena = Arena::new();
-        let mut open_list = VecDeque::new();
-        let mut visited = HashSet::new();
-        open_list.push_back((0, START.to_string(), None));
-        search(open_list, |(level, node, parent): &(usize, String, Option<String>), q| {
-            if !visited.contains(&(*level, node.clone(), parent.clone())) {
-                visited.insert((*level, node.clone(), parent.clone()));
-                let parent_paths = parent.clone().map(|p| table[*level - 1].get(p.as_str()).unwrap());
-                let mut paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths, &mut arena, allow_extra_small);
-                if paths_to.len() > 0 {
-                    if table.len() == *level {
-                        table.push(BTreeMap::new());
-                    }
-                    match table[*level].get_mut(node) {
-                        None => { table[*level].insert(node.clone(), paths_to); }
-                        Some(paths) => { paths.append(&mut paths_to); }
-                    }
+        breadth_first_search(&(0, START.to_string(), None), |(level, node, parent): &(usize, String, Option<String>), q| {
+            let parent_paths = parent.clone().map(|p| table[*level - 1].get(p.as_str()).unwrap());
+            let mut paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths, &mut arena, allow_extra_small);
+            if paths_to.len() > 0 {
+                if table.len() == *level {
+                    table.push(BTreeMap::new());
+                }
+                match table[*level].get_mut(node) {
+                    None => { table[*level].insert(node.clone(), paths_to); }
+                    Some(paths) => { paths.append(&mut paths_to); }
+                }
 
-                    if node.as_str() != END {
-                        for neighbor in graph.neighbors_of(node.as_str()).unwrap() {
-                            q.enqueue(&(level + 1, neighbor.clone(), Some(node.clone())));
-                        }
+                if node.as_str() != END {
+                    for neighbor in graph.neighbors_of(node.as_str()).unwrap() {
+                        q.enqueue(&(level + 1, neighbor.clone(), Some(node.clone())));
                     }
                 }
             }
