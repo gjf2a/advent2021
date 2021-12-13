@@ -53,12 +53,9 @@ impl PathTable {
         let mut arena = Arena::new();
         breadth_first_search(&(0, START.to_string(), None), |search_node: &(usize, String, Option<String>), q| {
             let (level, node, parent) = search_node;
-            let q_parent = q.parent_of(search_node);
+            let q_parent = q.parent_of(search_node).clone().map(|(_, p, _)| p);
             println!("parent: {:?} q_parent: {:?}", parent, q_parent);
-            assert!(q_parent.clone().map_or(true, |(_, p, _)| {
-                println!("parent: {:?} p: {:?}", parent, p);
-                p == parent.clone().unwrap()
-            }));
+            assert_eq!(q_parent, parent.clone());
             let parent_paths = parent.clone().map(|p| table[*level - 1].get(p.as_str()).unwrap());
             let paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths, &mut arena, allow_extra_small);
             if paths_to.len() > 0 {
