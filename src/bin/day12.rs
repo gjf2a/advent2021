@@ -25,13 +25,17 @@ fn main() -> io::Result<()> {
     })
 }
 
-fn build_graph_from(filename: &str) -> io::Result<AdjacencySets> {
+pub fn build_graph_from(filename: &str) -> io::Result<AdjacencySets> {
     let mut graph = AdjacencySets::new();
     for line in all_lines(filename)? {
         let parts: Vec<&str> = line.split('-').collect();
         graph.connect2(parts[0], parts[1]);
     }
     Ok(graph)
+}
+
+pub fn has_upper(s: &str) -> bool {
+    s.chars().any(|c| c.is_uppercase())
 }
 
 fn show(table: &PathTable) {
@@ -153,10 +157,6 @@ impl Rule {
             }
         }
     }
-}
-
-fn has_upper(s: &str) -> bool {
-    s.chars().any(|c| c.is_uppercase())
 }
 
 impl Display for PathTable {
