@@ -51,9 +51,12 @@ impl PathTable {
     fn new(graph: &AdjacencySets, allow_extra_small: bool) -> Self {
         let mut table: Vec<BTreeMap<String,BTreeSet<usize>>> = Vec::new();
         let mut arena = Arena::new();
-        breadth_first_search(&(0, START.to_string(), None), |(level, node, parent): &(usize, String, Option<String>), q| {
-            let parent_paths = parent.clone().map(|p| table[*level - 1].get(p.as_str()).unwrap());
-            let paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths, &mut arena, allow_extra_small);
+        breadth_first_search(&(0, START.to_string(), None),
+                             |(level, node, parent): &(usize, String, Option<String>), q| {
+            let parent_paths = parent.clone()
+                .map(|p| table[*level - 1].get(p.as_str()).unwrap());
+            let paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths,
+                                                     &mut arena, allow_extra_small);
             if paths_to.len() > 0 {
                 PathTable::update_table(&mut table, *level, node.as_str(), paths_to);
                 if node.as_str() != END {
@@ -67,23 +70,21 @@ impl PathTable {
         PathTable {table, arena}
     }
 
-    fn make_paths_for(node: &str, parent_paths: &Option<&BTreeSet<usize>>, arena: &mut Arena<String>, allow_extra_small: bool) -> BTreeSet<usize> {
+    fn make_paths_for(node: &str, parent_paths: &Option<&BTreeSet<usize>>,
+                      arena: &mut Arena<String>, allow_extra_small: bool) -> BTreeSet<usize> {
         match parent_paths {
-            None => {
-                b_tree_set![arena.alloc(node.to_string(), None)]
-            }
+            None => b_tree_set![arena.alloc(node.to_string(), None)],
             Some(parent_paths) => {
-                let mut allow_extra_small = allow_extra_small;
-                if [START, END].contains(&node) {
-                    allow_extra_small = false;
-                }
-                let path_prefixes = PathTable::filter_parent_paths(*parent_paths, node, arena, allow_extra_small);
+                let allow_extra_small = allow_extra_small && ![START, END].contains(&node);
+                let path_prefixes = PathTable::filter_parent_paths(*parent_paths, node,
+                                                                   arena, allow_extra_small);
                 PathTable::allocate_new_paths(&path_prefixes, node, arena)
             }
         }
     }
 
-    fn filter_parent_paths(parent_paths: &BTreeSet<usize>, node: &str, arena: &mut Arena<String>, allow_extra_small: bool) -> Vec<usize> {
+    fn filter_parent_paths(parent_paths: &BTreeSet<usize>, node: &str, arena: &mut Arena<String>,
+                           allow_extra_small: bool) -> Vec<usize> {
         parent_paths.iter()
             .filter(|addr| has_upper(node) ||
                 !allow_extra_small && PathTable::rigid_small_constraint(arena, **addr, node) ||
@@ -92,7 +93,8 @@ impl PathTable {
             .collect()
     }
 
-    fn allocate_new_paths(path_prefixes: &Vec<usize>, node: &str, arena: &mut Arena<String>) -> BTreeSet<usize> {
+    fn allocate_new_paths(path_prefixes: &Vec<usize>, node: &str,
+                          arena: &mut Arena<String>) -> BTreeSet<usize> {
         path_prefixes.iter()
             .map(|addr| arena.alloc(node.to_string(), Some(*addr)))
             .collect()
@@ -111,7 +113,8 @@ impl PathTable {
         node_count == 1 && num_2 == 0 || node_count == 0 && num_2 <= 1
     }
 
-    fn update_table(table: &mut Vec<BTreeMap<String,BTreeSet<usize>>>, level: usize, node: &str, mut paths_to: BTreeSet<usize>) {
+    fn update_table(table: &mut Vec<BTreeMap<String,BTreeSet<usize>>>, level: usize, node: &str,
+                    mut paths_to: BTreeSet<usize>) {
         if table.len() == level {
             table.push(BTreeMap::new());
         }
