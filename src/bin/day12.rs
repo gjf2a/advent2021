@@ -18,7 +18,7 @@ fn main() -> io::Result<()> {
     generic_main("day12", &["(1|2)"], &[SHOW_PATH_ARG], |args| {
         let graph = build_graph_from(args[1].as_str())?;
         let part = args[2].as_str();
-        let table = PathTable::new(&graph, part == "2");
+        let table = PathTable::new(&graph, if part == "2" {Rule::Part2} else {Rule::Part1});
         if args.len() >= 4 {show(&table);}
         println!("Part {}: {}", part, table.total_path_count_to(END));
         Ok(())
@@ -48,7 +48,7 @@ struct PathTable {
 }
 
 impl PathTable {
-    fn new(graph: &AdjacencySets, allow_extra_small: bool) -> Self {
+    fn new(graph: &AdjacencySets, rule: Rule) -> Self {
         let mut table: Vec<BTreeMap<String,BTreeSet<usize>>> = Vec::new();
         let mut arena = Arena::new();
         breadth_first_search(&(0, START.to_string(), None),
@@ -56,7 +56,7 @@ impl PathTable {
             let parent_paths = parent.clone()
                 .map(|p| table[*level - 1].get(p.as_str()).unwrap());
             let paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths,
-                                                     &mut arena, allow_extra_small);
+                                                     &mut arena, rule);
             if paths_to.len() > 0 {
                 PathTable::update_table(&mut table, *level, node.as_str(), paths_to);
                 if node.as_str() != END {
@@ -71,24 +71,20 @@ impl PathTable {
     }
 
     fn make_paths_for(node: &str, parent_paths: &Option<&BTreeSet<usize>>,
-                      arena: &mut Arena<String>, allow_extra_small: bool) -> BTreeSet<usize> {
+                      arena: &mut Arena<String>, rule: Rule) -> BTreeSet<usize> {
         match parent_paths {
             None => b_tree_set![arena.alloc(node.to_string(), None)],
             Some(parent_paths) => {
-                let allow_extra_small = allow_extra_small && ![START, END].contains(&node);
-                let path_prefixes = PathTable::filter_parent_paths(*parent_paths, node,
-                                                                   arena, allow_extra_small);
+                let path_prefixes = PathTable::filter_parent_paths(*parent_paths, node, arena, rule);
                 PathTable::allocate_new_paths(&path_prefixes, node, arena)
             }
         }
     }
 
     fn filter_parent_paths(parent_paths: &BTreeSet<usize>, node: &str, arena: &mut Arena<String>,
-                           allow_extra_small: bool) -> Vec<usize> {
+                           rule: Rule) -> Vec<usize> {
         parent_paths.iter()
-            .filter(|addr| has_upper(node) ||
-                !allow_extra_small && PathTable::rigid_small_constraint(arena, **addr, node) ||
-                allow_extra_small && PathTable::looser_small_constraint(arena, **addr, node))
+            .filter(|addr| has_upper(node) || rule.allowed(arena, **addr, node))
             .copied()
             .collect()
     }
@@ -98,19 +94,6 @@ impl PathTable {
         path_prefixes.iter()
             .map(|addr| arena.alloc(node.to_string(), Some(*addr)))
             .collect()
-    }
-
-    fn rigid_small_constraint(arena: &Arena<String>, addr: usize, node: &str) -> bool {
-        !arena.get(addr).iter(arena).any(|s| s.as_str() == node)
-    }
-
-    fn looser_small_constraint(arena: &Arena<String>, addr: usize, node: &str) -> bool {
-        let small_counts: HashHistogram<String> = arena.get(addr).iter(arena)
-            .filter(|s| !has_upper((*s).as_str()))
-            .collect();
-        let num_2 = small_counts.iter().filter(|(_, count)| **count > 1).count();
-        let node_count = small_counts.count(&node.to_string());
-        node_count == 1 && num_2 == 0 || node_count == 0 && num_2 <= 1
     }
 
     fn update_table(table: &mut Vec<BTreeMap<String,BTreeSet<usize>>>, level: usize, node: &str,
@@ -144,6 +127,31 @@ impl PathTable {
 
     fn total_path_count_to(&self, node: &str) -> usize {
         self.all_paths_to(node).len()
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+enum Rule {
+    Part1, Part2
+}
+
+impl Rule {
+    fn allowed(&self, arena: &Arena<String>, addr: usize, node: &str) -> bool {
+        match self {
+            Rule::Part1 => !arena.get(addr).iter(arena).any(|s| s.as_str() == node),
+            Rule::Part2 => {
+                if [START, END].contains(&node) {
+                    Rule::Part1.allowed(arena, addr, node)
+                } else {
+                    let small_counts: HashHistogram<String> = arena.get(addr).iter(arena)
+                        .filter(|s| !has_upper((*s).as_str()))
+                        .collect();
+                    let num_2 = small_counts.iter().filter(|(_, count)| **count > 1).count();
+                    let node_count = small_counts.count(&node.to_string());
+                    node_count == 1 && num_2 == 0 || node_count == 0 && num_2 <= 1
+                }
+            }
+        }
     }
 }
 
