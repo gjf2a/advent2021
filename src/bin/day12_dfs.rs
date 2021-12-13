@@ -63,9 +63,9 @@ fn all_paths(graph: &AdjacencySets, rule: Rule) -> Vec<Vec<String>> {
 }
 
 fn path_at_addr(arena: &Arena<String>, addr: usize) -> Vec<String> {
-    let mut path = arena.iter_from(addr).collect::<Vec<_>>();
+    let mut path = arena.iter_from(addr).cloned().collect::<Vec<_>>();
     path.reverse();
-    path.iter().map(|s| (*s).clone()).collect()
+    path
 }
 
 #[derive(Copy, Clone, Debug)]
