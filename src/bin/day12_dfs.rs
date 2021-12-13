@@ -63,7 +63,7 @@ fn all_paths(graph: &AdjacencySets, rule: Rule) -> Vec<Vec<String>> {
 }
 
 fn path_at_addr(arena: &Arena<String>, addr: usize) -> Vec<String> {
-    let mut path = arena.get(addr).iter(&arena).collect::<Vec<_>>();
+    let mut path = arena.iter_from(addr).collect::<Vec<_>>();
     path.reverse();
     path.iter().map(|s| (*s).clone()).collect()
 }
@@ -78,7 +78,7 @@ impl Rule {
         match parent {
             None => true,
             Some(parent_addr) => {
-                let mut path_counts: HashHistogram<String> = arena.get(parent_addr).iter(arena).collect();
+                let mut path_counts: HashHistogram<String> = arena.iter_from(parent_addr).collect();
                 path_counts.bump(&node.to_string());
                 let mut potential_problems = path_counts.iter()
                     .filter(|(s, c)| !has_upper(s.as_str()) && **c > 1);
