@@ -1,12 +1,15 @@
 use std::collections::HashSet;
 use std::io;
-use advent_code_lib::{all_lines, generic_main, Position};
+use advent_code_lib::{all_lines, generic_main, Position, RowMajorPositionIterator};
 
 fn main() -> io::Result<()> {
-    generic_main("day13", &[], &[], |args| {
+    generic_main("day13", &[], &["-show-start"], |args| {
         let (points, instructions) = parse_input(args[1].as_str())?;
-        println!("{:?}", points);
-        println!("{:?}", instructions);
+        if args.len() > 2 {
+            println!("Starting position");
+            visualize(&points);
+        }
+        println!("Part 1 score: {}", one_fold_count(&points, &instructions));
         Ok(())
     })
 }
@@ -16,6 +19,22 @@ fn parse_input(filename: &str) -> io::Result<(HashSet<Position>, Vec<FoldInstruc
     let points: HashSet<Position> = lines.by_ref().take_while(|line| line.len() > 0).map(|line| line.parse().unwrap()).collect();
     let instructions: Vec<FoldInstruction> = lines.map(|line| FoldInstruction::from(line.as_str())).collect();
     Ok((points, instructions))
+}
+
+fn one_fold_count(points: &HashSet<Position>, instructions: &Vec<FoldInstruction>) -> usize {
+    instructions[0].folded_points(points.iter()).len()
+}
+
+fn visualize(points: &HashSet<Position>) {
+    let width = 1 + points.iter().map(|p| p.col as usize).max().unwrap();
+    let height = 1 + points.iter().map(|p| p.row as usize).max().unwrap();
+    for p in RowMajorPositionIterator::new(width, height) {
+        if p.col == 0 && p.row > 0 {
+            println!();
+        }
+        print!("{}", if points.contains(&p) {'#'} else {'.'});
+    }
+    println!();
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -51,6 +70,10 @@ impl FoldInstruction {
             FoldInstruction::Vertical(x_fold) =>
                 (FoldInstruction::remapped_value(*x_fold, p.col), p.row)
         })
+    }
+
+    fn folded_points<'a, I: Iterator<Item=&'a Position>>(&'a self, points: I) -> HashSet<Position> {
+        points.map(|p| self.folded_point(*p)).collect()
     }
 }
 
