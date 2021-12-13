@@ -54,6 +54,7 @@ impl FoldInstruction {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use advent_code_lib::Position;
