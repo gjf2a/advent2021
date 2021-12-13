@@ -18,7 +18,8 @@ const SHOW_PATH_ARG: &'static str = "-show-paths";
 fn main() -> io::Result<()> {
     generic_main("day12", &["(1|2)"], &[SHOW_PATH_ARG], |args| {
         let graph = build_graph_from(args[1].as_str())?;
-        let table = PathTable::new(&graph, args[2].as_str() == "2");
+        let part = args[2].as_str();
+        let table = PathTable::new(&graph, part == "2");
         if let Some(arg) = args.get(3) {
             if arg.as_str() == SHOW_PATH_ARG {
                 println!("{}", table);
@@ -32,7 +33,7 @@ fn main() -> io::Result<()> {
                 println!("unique: {}", unique.len());
             }
         }
-        println!("Part 1: {}", table.total_path_count_to(END));
+        println!("Part {}: {}", part, table.total_path_count_to(END));
         Ok(())
     })
 }
@@ -91,6 +92,10 @@ impl PathTable {
                 b_tree_set![arena.alloc(node.to_string(), None)]
             }
             Some(parent_paths) => {
+                let mut allow_extra_small = allow_extra_small;
+                if [START, END].contains(&node) {
+                    allow_extra_small = false;
+                }
                 let path_prefixes: Vec<&usize> = parent_paths.iter()
                     .filter(|addr| has_upper(node) ||
                         !allow_extra_small && PathTable::rigid_small_constraint(arena, **addr, node) ||
@@ -109,7 +114,7 @@ impl PathTable {
 
     fn looser_small_constraint(arena: &Arena<String>, addr: usize, node: &str) -> bool {
         let small_counts: HashHistogram<String> = arena.get(addr).iter(arena)
-            .filter(|s| has_upper((*s).as_str()))
+            .filter(|s| !has_upper((*s).as_str()))
             .collect();
         let num_2 = small_counts.iter().filter(|(_, count)| **count > 1).count();
         let node_count = small_counts.count(&node.to_string());
