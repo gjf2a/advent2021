@@ -22,14 +22,9 @@ fn main() -> io::Result<()> {
         if let Some(arg) = args.get(3) {
             if arg.as_str() == SHOW_PATH_ARG {
                 println!("{}", table);
-                let mut unique = BTreeSet::new();
-                for path in table.all_paths_to(END) {
-                    unique.insert(format!("{:?}", path));
+                for path in table.all_paths_to(END).iter() {
+                    println!("{:?}", path);
                 }
-                for path in unique.iter() {
-                    println!("{}", path);
-                }
-                println!("unique: {}", unique.len());
             }
         }
         println!("Part {}: {}", part, table.total_path_count_to(END));
@@ -58,16 +53,9 @@ impl PathTable {
         let mut arena = Arena::new();
         breadth_first_search(&(0, START.to_string(), None), |(level, node, parent): &(usize, String, Option<String>), q| {
             let parent_paths = parent.clone().map(|p| table[*level - 1].get(p.as_str()).unwrap());
-            let mut paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths, &mut arena, allow_extra_small);
+            let paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths, &mut arena, allow_extra_small);
             if paths_to.len() > 0 {
-                if table.len() == *level {
-                    table.push(BTreeMap::new());
-                }
-                match table[*level].get_mut(node) {
-                    None => { table[*level].insert(node.clone(), paths_to); }
-                    Some(paths) => { paths.append(&mut paths_to); }
-                }
-
+                PathTable::update_table(&mut table, *level, node.as_str(), paths_to);
                 if node.as_str() != END {
                     for neighbor in graph.neighbors_of(node.as_str()).unwrap() {
                         q.enqueue(&(level + 1, neighbor.clone(), Some(node.clone())));
@@ -89,16 +77,25 @@ impl PathTable {
                 if [START, END].contains(&node) {
                     allow_extra_small = false;
                 }
-                let path_prefixes: Vec<&usize> = parent_paths.iter()
-                    .filter(|addr| has_upper(node) ||
-                        !allow_extra_small && PathTable::rigid_small_constraint(arena, **addr, node) ||
-                        allow_extra_small && PathTable::looser_small_constraint(arena, **addr, node))
-                    .collect();
-                path_prefixes.iter()
-                    .map(|addr| arena.alloc(node.to_string(), Some(**addr)))
-                    .collect()
+                let path_prefixes = PathTable::filter_parent_paths(*parent_paths, node, arena, allow_extra_small);
+                PathTable::allocate_new_paths(&path_prefixes, node, arena)
             }
         }
+    }
+
+    fn filter_parent_paths(parent_paths: &BTreeSet<usize>, node: &str, arena: &mut Arena<String>, allow_extra_small: bool) -> Vec<usize> {
+        parent_paths.iter()
+            .filter(|addr| has_upper(node) ||
+                !allow_extra_small && PathTable::rigid_small_constraint(arena, **addr, node) ||
+                allow_extra_small && PathTable::looser_small_constraint(arena, **addr, node))
+            .copied()
+            .collect()
+    }
+
+    fn allocate_new_paths(path_prefixes: &Vec<usize>, node: &str, arena: &mut Arena<String>) -> BTreeSet<usize> {
+        path_prefixes.iter()
+            .map(|addr| arena.alloc(node.to_string(), Some(*addr)))
+            .collect()
     }
 
     fn rigid_small_constraint(arena: &Arena<String>, addr: usize, node: &str) -> bool {
@@ -112,6 +109,16 @@ impl PathTable {
         let num_2 = small_counts.iter().filter(|(_, count)| **count > 1).count();
         let node_count = small_counts.count(&node.to_string());
         node_count == 1 && num_2 == 0 || node_count == 0 && num_2 <= 1
+    }
+
+    fn update_table(table: &mut Vec<BTreeMap<String,BTreeSet<usize>>>, level: usize, node: &str, mut paths_to: BTreeSet<usize>) {
+        if table.len() == level {
+            table.push(BTreeMap::new());
+        }
+        match table[level].get_mut(node) {
+            None => { table[level].insert(node.to_string(), paths_to.clone()); }
+            Some(paths) => { paths.append(&mut paths_to); }
+        }
     }
 
     fn all_paths_to(&self, node: &str) -> Vec<Vec<String>> {
