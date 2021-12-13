@@ -44,9 +44,10 @@ fn show(paths: &Vec<Vec<String>>) {
 fn all_paths(graph: &AdjacencySets, rule: Rule) -> Vec<Vec<String>> {
     let mut all_paths = Vec::new();
     let mut arena = Arena::new();
-    let mut stack: ParentMapQueue<(usize, Option<usize>), Vec<(usize, Option<usize>)>> = ParentMapQueue::new();
-    stack.enqueue(&(arena.alloc(START.to_string(), None), None));
-    search(stack, |(node, parent), stack| {
+    let mut stack: ParentMapQueue<usize, Vec<usize>> = ParentMapQueue::new();
+    stack.enqueue(&(arena.alloc(START.to_string(), None)));
+    search(stack, |node, stack| {
+        let parent = stack.parent_of(node);
         let last_name = arena.get(*node).get().as_str();
         if rule.allows(&arena, last_name, *parent) {
             if last_name == END {
@@ -54,7 +55,7 @@ fn all_paths(graph: &AdjacencySets, rule: Rule) -> Vec<Vec<String>> {
             } else {
                 for neighbor in graph.neighbors_of(last_name).unwrap() {
                     let new_addr = arena.alloc(neighbor.clone(), Some(*node));
-                    stack.enqueue(&(new_addr, Some(*node)));
+                    stack.enqueue(&new_addr);
                 }
             }
         }
