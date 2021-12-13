@@ -10,6 +10,7 @@ fn main() -> io::Result<()> {
             visualize(&points);
         }
         println!("Part 1 score: {}", one_fold_count(&points, &instructions));
+        visualize_folded(&points, &instructions);
         Ok(())
     })
 }
@@ -23,6 +24,14 @@ fn parse_input(filename: &str) -> io::Result<(HashSet<Position>, Vec<FoldInstruc
 
 fn one_fold_count(points: &HashSet<Position>, instructions: &Vec<FoldInstruction>) -> usize {
     instructions[0].folded_points(points.iter()).len()
+}
+
+fn fold_all(points: &HashSet<Position>, instructions: &Vec<FoldInstruction>) -> HashSet<Position> {
+    instructions.iter().fold(points.clone(), |prev, instr| instr.folded_points(prev.iter()))
+}
+
+fn visualize_folded(points: &HashSet<Position>, instructions: &Vec<FoldInstruction>) {
+    visualize(&fold_all(points, instructions));
 }
 
 fn visualize(points: &HashSet<Position>) {
