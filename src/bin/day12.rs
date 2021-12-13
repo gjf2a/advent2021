@@ -3,6 +3,7 @@ use std::fmt::{Display, Formatter};
 use std::io;
 use advent_code_lib::{AdjacencySets, all_lines, Arena, generic_main, search, SearchQueue};
 use common_macros::b_tree_set;
+use hash_histogram::HashHistogram;
 
 // NOTE:
 // * No big cave is ever connected to another big cave!
@@ -14,10 +15,10 @@ const END: &'static str = "end";
 const SHOW_PATH_ARG: &'static str = "-show-paths";
 
 fn main() -> io::Result<()> {
-    generic_main("day12", &[], &[SHOW_PATH_ARG], |args| {
+    generic_main("day12", &["(1|2)"], &[SHOW_PATH_ARG], |args| {
         let graph = build_graph_from(args[1].as_str())?;
-        let table = PathTable::new(&graph);
-        if let Some(arg) = args.get(2) {
+        let table = PathTable::new(&graph, args[2].as_str() == "2");
+        if let Some(arg) = args.get(3) {
             if arg.as_str() == SHOW_PATH_ARG {
                 println!("{}", table);
                 let mut unique = BTreeSet::new();
@@ -51,7 +52,7 @@ struct PathTable {
 }
 
 impl PathTable {
-    fn new(graph: &AdjacencySets) -> Self {
+    fn new(graph: &AdjacencySets, allow_extra_small: bool) -> Self {
         let mut table: Vec<BTreeMap<String,BTreeSet<usize>>> = Vec::new();
         let mut arena = Arena::new();
         let mut open_list = VecDeque::new();
@@ -61,7 +62,7 @@ impl PathTable {
             if !visited.contains(&(*level, node.clone(), parent.clone())) {
                 visited.insert((*level, node.clone(), parent.clone()));
                 let parent_paths = parent.clone().map(|p| table[*level - 1].get(p.as_str()).unwrap());
-                let mut paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths, &mut arena);
+                let mut paths_to = PathTable::make_paths_for(node.as_str(), &parent_paths, &mut arena, allow_extra_small);
                 if paths_to.len() > 0 {
                     if table.len() == *level {
                         table.push(BTreeMap::new());
@@ -83,21 +84,35 @@ impl PathTable {
         PathTable {table, arena}
     }
 
-    fn make_paths_for(node: &str, parent_paths: &Option<&BTreeSet<usize>>, arena: &mut Arena<String>) -> BTreeSet<usize> {
+    fn make_paths_for(node: &str, parent_paths: &Option<&BTreeSet<usize>>, arena: &mut Arena<String>, allow_extra_small: bool) -> BTreeSet<usize> {
         match parent_paths {
             None => {
                 b_tree_set![arena.alloc(node.to_string(), None)]
             }
             Some(parent_paths) => {
-                let can_repeat = node.chars().any(|c| c.is_uppercase());
                 let path_prefixes: Vec<&usize> = parent_paths.iter()
-                    .filter(|addr| can_repeat || !arena.get(**addr).iter(arena).any(|s| s.as_str() == node))
+                    .filter(|addr| has_upper(node) ||
+                        !allow_extra_small && PathTable::rigid_small_constraint(arena, **addr, node) ||
+                        allow_extra_small && PathTable::looser_small_constraint(arena, **addr, node))
                     .collect();
                 path_prefixes.iter()
                     .map(|addr| arena.alloc(node.to_string(), Some(**addr)))
                     .collect()
             }
         }
+    }
+
+    fn rigid_small_constraint(arena: &Arena<String>, addr: usize, node: &str) -> bool {
+        !arena.get(addr).iter(arena).any(|s| s.as_str() == node)
+    }
+
+    fn looser_small_constraint(arena: &Arena<String>, addr: usize, node: &str) -> bool {
+        let small_counts: HashHistogram<String> = arena.get(addr).iter(arena)
+            .filter(|s| has_upper((*s).as_str()))
+            .collect();
+        let num_2 = small_counts.iter().filter(|(_, count)| **count > 1).count();
+        let node_count = small_counts.count(&node.to_string());
+        node_count == 1 && num_2 == 0 || node_count == 0 && num_2 <= 1
     }
 
     fn all_paths_to(&self, node: &str) -> Vec<Vec<String>> {
@@ -121,6 +136,10 @@ impl PathTable {
     fn total_path_count_to(&self, node: &str) -> usize {
         self.all_paths_to(node).len()
     }
+}
+
+fn has_upper(s: &str) -> bool {
+    s.chars().any(|c| c.is_uppercase())
 }
 
 impl Display for PathTable {
