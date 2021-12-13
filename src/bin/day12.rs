@@ -19,14 +19,7 @@ fn main() -> io::Result<()> {
         let graph = build_graph_from(args[1].as_str())?;
         let part = args[2].as_str();
         let table = PathTable::new(&graph, part == "2");
-        if let Some(arg) = args.get(3) {
-            if arg.as_str() == SHOW_PATH_ARG {
-                println!("{}", table);
-                for path in table.all_paths_to(END).iter() {
-                    println!("{:?}", path);
-                }
-            }
-        }
+        if args.len() >= 4 {show(&table);}
         println!("Part {}: {}", part, table.total_path_count_to(END));
         Ok(())
     })
@@ -39,6 +32,13 @@ fn build_graph_from(filename: &str) -> io::Result<AdjacencySets> {
         graph.connect2(parts[0], parts[1]);
     }
     Ok(graph)
+}
+
+fn show(table: &PathTable) {
+    println!("{}", table);
+    for path in table.all_paths_to(END).iter() {
+        println!("{:?}", path);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -157,7 +157,8 @@ impl Display for PathTable {
             writeln!(f, "Row {}", row_num)?;
             for (node, parents) in row.iter() {
                 writeln!(f, "Node: {}", node)?;
-                for (id, path) in parents.iter().map(|id| (id, self.path_at_addr(*id))) {
+                for (id, path) in parents.iter()
+                    .map(|id| (id, self.path_at_addr(*id))) {
                     writeln!(f, "({}) {:?}", id, path)?;
                 }
             }
