@@ -19,20 +19,28 @@ fn score_after(polymer: &PolymerIterator, num_steps: usize) -> usize {
 
 #[derive(Debug, Clone)]
 struct PolymerIterator {
-    chain: String,
-    rules: HashMap<(char,char),char>
+    state: HashHistogram<(char,char)>,
+    final_pair: (char, char),
+    rules: HashMap<(char,char), char>
 }
 
 impl PolymerIterator {
     fn new(filename: &str) -> io::Result<Self> {
         let mut lines = all_lines(filename)?;
-        let chain = lines.next().unwrap();
+        let first_line = lines.next().unwrap();
+        let pairs: Vec<(char, char)> = first_line.chars()
+            .zip(first_line.chars().skip(1))
+            .map(|(a, b)| (a, b))
+            .collect();
+        let state = pairs.iter().collect();
+        let final_pair = *pairs.last().unwrap();
+
         lines.next();
         let rules = lines.map(|line| {
             let mut parts = line.split(" -> ");
             (key_from(parts.next().unwrap()), value_from(parts.next().unwrap()))
         }).collect();
-        Ok(PolymerIterator {chain, rules})
+        Ok(PolymerIterator {state, final_pair, rules})
     }
 }
 
@@ -49,23 +57,26 @@ impl Iterator for PolymerIterator {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let result = self.chain.clone();
-        self.chain = format!("{}{}", self.chain.chars().next().unwrap(), self.chain.chars()
-            .zip(self.chain.chars().skip(1))
-            .map(|(a, b)| combine(*self.rules.get(&(a, b)).unwrap(), b))
-            .collect::<String>());
-        Some(score_for(result))
+        let result = score_histogram(&self.state, self.final_pair);
+        let mut updated_state = HashHistogram::new();
+        for ((a, c), _) in self.state.iter() {
+            let b = self.rules.get(&(*a, *c)).unwrap();
+            updated_state.bump(&(*a, *b));
+            updated_state.bump(&(*b, *c));
+            if (*a, *c) == self.final_pair {
+                self.final_pair = (*b, *c);
+            }
+        }
+        self.state = updated_state;
+        Some(result)
     }
 }
 
-fn score_for(chain: String) -> usize {
-    let histogram: HashHistogram<char> = chain.chars().collect();
+fn score_histogram(pair_counts: &HashHistogram<(char,char)>, final_pair: (char, char)) -> usize {
+    let mut histogram: HashHistogram<char> = pair_counts.iter().map(|((a, _), _)| *a).collect();
+    histogram.bump(&final_pair.1);
     let ranked = histogram.ranking();
     histogram.count(&ranked[0]) - histogram.count(&ranked[ranked.len() - 1])
-}
-
-fn combine(a: char, b: char) -> String {
-    format!("{}{}", a, b)
 }
 
 #[cfg(test)]
@@ -77,4 +88,29 @@ mod tests {
         let polymer = PolymerIterator::new("ex/day14.txt").unwrap();
         assert_eq!(polymer.skip(10).next().unwrap(), 1588);
     }
+
+    fn num_pairs_after(start_size: usize, num_steps: usize) -> usize {
+        let mut size = start_size;
+        for _ in 0..num_steps {
+            size = size * 2 - 1
+        }
+        size
+    }
+
+    #[test]
+    fn ideas() {
+
+    }
 }
+
+// NNCB - NN: 1, NC: 1, CB: 1
+// Final pair: CB
+// 2 start w/N, 1 starts w/C, then add Bs from final pair
+// N: 2, C: 1, B: 1
+
+// NCNBCHB - NC: 1, CN: 1, NB: 1, BC: 1, CH: 1, HB: 1
+// Final pair: HB
+// 2 start w/N, 2 start w/C, 1 starts w/B, 1 starts w/H
+// N: 2, C: 2, B: 1 + 1 = 2, H: 1
+
+// NBCCNBBBCBHCB: NB: 2, BC: 2, CC: 1, CN: 1, BB: 2, CB: 2, BH: 1, HC: 1
