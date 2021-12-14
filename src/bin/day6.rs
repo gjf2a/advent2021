@@ -1,12 +1,12 @@
 use std::io;
 use std::collections::HashMap;
-use advent_code_lib::{first_line_only_numbers, generic_main};
+use advent_code_lib::{first_line_only_numbers, advent_main};
 
 const FIRST: usize = 9;
 const REST: usize = 7;
 
 fn main() -> io::Result<()> {
-    generic_main("day6", &["duration"], &["table"], |args| {
+    advent_main(&["duration"], &["table"], |args| {
         let fish_counters = first_line_only_numbers::<usize>(args[1].as_str())?;
         let duration: usize = args[2].parse().unwrap();
         let mut table = HashMap::new();

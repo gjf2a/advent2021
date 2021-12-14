@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use std::io;
-use advent_code_lib::{all_lines, generic_main, Position, RowMajorPositionIterator};
+use advent_code_lib::{all_lines, advent_main, Position, RowMajorPositionIterator};
 
 fn main() -> io::Result<()> {
-    generic_main("day13", &[], &["-show-start"], |args| {
+    advent_main(&[], &["-show-start"], |args| {
         let (points, instructions) = parse_input(args[1].as_str())?;
         if args.len() > 2 {
             println!("Starting position");

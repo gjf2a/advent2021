@@ -1,12 +1,12 @@
 use std::io;
 use std::str::FromStr;
-use advent_code_lib::{all_lines, generic_main, Position};
+use advent_code_lib::{all_lines, advent_main, Position};
 use hash_histogram::HashHistogram;
 
 const MIN_OVERLAP: usize = 2;
 
 fn main() -> io::Result<()> {
-    generic_main("day5", &["(1|2)"], &["show"], |args| {
+    advent_main(&["(1|2)"], &["show"], |args| {
         let (segments, with_diagonals, show) = segments_diagonals_show(&args)?;
         let counts = count_intersections(&segments, with_diagonals);
         if show {print_diagram(&counts, &segments);}

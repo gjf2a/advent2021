@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Display, Formatter};
 use std::io;
-use advent_code_lib::{AdjacencySets, all_lines, Arena, breadth_first_search, generic_main, SearchQueue};
+use advent_code_lib::{AdjacencySets, all_lines, Arena, breadth_first_search, advent_main, SearchQueue};
 use common_macros::b_tree_set;
 use hash_histogram::HashHistogram;
 
@@ -15,7 +15,7 @@ const END: &'static str = "end";
 const SHOW_PATH_ARG: &'static str = "-show-paths";
 
 fn main() -> io::Result<()> {
-    generic_main("day12", &["(1|2)"], &[SHOW_PATH_ARG], |args| {
+    advent_main(&["(1|2)"], &[SHOW_PATH_ARG], |args| {
         let graph = build_graph_from(args[1].as_str())?;
         let part = args[2].as_str();
         let table = PathTable::new(&graph, if part == "2" {Rule::Part2} else {Rule::Part1});

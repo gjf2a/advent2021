@@ -1,10 +1,10 @@
 use std::io;
-use advent_code_lib::{all_lines, generic_main};
+use advent_code_lib::{all_lines, advent_main};
 use bits::BitArray;
 use num::BigUint;
 
 fn main() -> io::Result<()> {
-    generic_main("day3", &[], &[], |args| {
+    advent_main(&[], &[], |args| {
         let binary_nums: Vec<BitArray> = all_lines(args[1].as_str())?.map(|s| s.parse().unwrap()).collect();
         part1(&binary_nums)?;
         part2(&binary_nums)

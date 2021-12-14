@@ -1,8 +1,8 @@
 use std::io;
-use advent_code_lib::{for_each_line, generic_main, Position};
+use advent_code_lib::{for_each_line, advent_main, Position};
 
 fn main() -> io::Result<()> {
-    generic_main("day2", &["(1|2)"], &[], |args| {
+    advent_main(&["(1|2)"], &[], |args| {
         let mut sub = Submarine::new();
         for_each_line(args[1].as_str(), |line| {
             let parts: Vec<&str> = line.split_whitespace().collect();

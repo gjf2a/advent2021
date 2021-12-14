@@ -2,11 +2,11 @@ use std::cmp::max;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::{Display, Formatter};
 use std::io;
-use advent_code_lib::{all_lines, generic_main, Position, RowMajorPositionIterator, search};
+use advent_code_lib::{all_lines, advent_main, Position, RowMajorPositionIterator, search};
 use bare_metal_modulo::{MNum, ModNumC};
 
 fn main() -> io::Result<()> {
-    generic_main("day11", &[], &["-show:num_steps"], |args| {
+    advent_main(&[], &["-show:num_steps"], |args| {
         let octopi = DumboOctopi::new(args[1].as_str())?;
         match args.iter().find(|arg| arg.starts_with("-show")) {
             None => {

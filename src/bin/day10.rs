@@ -1,8 +1,8 @@
 use std::io;
-use advent_code_lib::{all_lines, generic_main};
+use advent_code_lib::{all_lines, advent_main};
 
 fn main() -> io::Result<()> {
-    generic_main("day10", &["(1|2)"], &[], |args| {
+    advent_main(&["(1|2)"], &[], |args| {
         let filename = args[1].as_str();
         let part = args[2].as_str();
         let score = match part {

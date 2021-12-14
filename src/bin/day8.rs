@@ -1,11 +1,11 @@
 use std::io;
 use std::collections::{HashMap, HashSet};
-use advent_code_lib::{all_lines, generic_main};
+use advent_code_lib::{all_lines, advent_main};
 
 const PATTERN_FOR: [&'static str; 10] = ["abcefg", "cf", "acdeg", "acdfg", "bcdf", "abdfg", "abdefg", "acf", "abcdefg", "abcdfg"];
 
 fn main() -> io::Result<()> {
-    generic_main("day8", &[], &[], |args| {
+    advent_main(&[], &[], |args| {
         let entries = all_lines(args[1].as_str())?
             .map(|s| DeviceEntry::from(s.as_str()))
             .collect();

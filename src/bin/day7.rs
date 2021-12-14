@@ -1,8 +1,8 @@
 use std::io;
-use advent_code_lib::{first_line_only_numbers, generic_main};
+use advent_code_lib::{first_line_only_numbers, advent_main};
 
 fn main() -> io::Result<()> {
-    generic_main("day7", &[], &[], |args| {
+    advent_main(&[], &[], |args| {
         let mut positions = first_line_only_numbers(args[1].as_str())?;
         positions.sort();
         report(1, &positions, part1_fuel_used_position);

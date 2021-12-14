@@ -1,5 +1,5 @@
 use std::io;
-use advent_code_lib::{AdjacencySets, all_lines, Arena, generic_main, ParentMapQueue, search, SearchQueue};
+use advent_code_lib::{AdjacencySets, all_lines, Arena, advent_main, ParentMapQueue, search, SearchQueue};
 use hash_histogram::HashHistogram;
 
 // NOTE:
@@ -12,7 +12,7 @@ const END: &'static str = "end";
 const SHOW_PATH_ARG: &'static str = "-show-paths";
 
 fn main() -> io::Result<()> {
-    generic_main("day12", &["(1|2)"], &[SHOW_PATH_ARG], |args| {
+    advent_main(&["(1|2)"], &[SHOW_PATH_ARG], |args| {
         let graph = build_graph_from(args[1].as_str())?;
         let part = args[2].as_str();
         let paths = all_paths(&graph, if part == "2" {Rule::Part2} else {Rule::Part1});

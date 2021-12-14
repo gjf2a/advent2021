@@ -1,12 +1,12 @@
 use std::io;
 use std::collections::HashMap;
-use advent_code_lib::{all_lines, breadth_first_search, generic_main, Position, SearchQueue};
+use advent_code_lib::{all_lines, breadth_first_search, advent_main, Position, SearchQueue};
 
 const MIN_SAFE_HEIGHT: u32 = 9;
 const NUM_LARGEST_BASINS: usize = 3;
 
 fn main() -> io::Result<()> {
-    generic_main("day9", &[], &[], |args| {
+    advent_main(&[], &[], |args| {
         let heights = HeightMap::from(args[1].as_str())?;
         println!("Part 1: {}", heights.risk_level_sum());
         println!("Part 2: {}", heights.largest_basin_product());

@@ -1,8 +1,8 @@
 use std::io;
-use advent_code_lib::{file2nums, generic_main};
+use advent_code_lib::{advent_main, file2nums};
 
 fn main() -> io::Result<()> {
-    generic_main("day1", &["window_width"], &[], |args| {
+    advent_main(&["window_width"], &[], |args| {
         let depths = file2nums(format!("{}", args[1]).as_str())?;
         let mut count = 0;
         let window_width = args[2].parse::<usize>().unwrap();

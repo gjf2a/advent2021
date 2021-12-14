@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::io;
-use advent_code_lib::{all_lines, generic_main};
+use advent_code_lib::{all_lines, advent_main};
 use hash_histogram::HashHistogram;
 
 fn main() -> io::Result<()> {
-    generic_main("day13", &[], &[], |args| {
+    advent_main(&[], &[], |args| {
         let polymer = PolymerIterator::new(args[1].as_str())?;
         println!("Part 1 score: {}", score_after(&polymer, 10));
         println!("Part 2 score: {}", score_after(&polymer, 40));
