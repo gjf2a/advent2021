@@ -7,7 +7,7 @@ fn main() -> io::Result<()> {
     generic_main("day13", &[], &[], |args| {
         let polymer = PolymerIterator::new(args[1].as_str())?;
         println!("Part 1 score: {}", score_after(&polymer, 10));
-        //println!("Part 2 score: {}", score_after(&polymer, 40));
+        println!("Part 2 score: {}", score_after(&polymer, 40));
         Ok(())
     })
 }
@@ -20,7 +20,7 @@ fn score_after(polymer: &PolymerIterator, num_steps: usize) -> usize {
 #[derive(Debug, Clone)]
 struct PolymerIterator {
     state: HashHistogram<(char,char)>,
-    final_pair: (char, char),
+    final_letter: char,
     rules: HashMap<(char,char), char>
 }
 
@@ -33,14 +33,14 @@ impl PolymerIterator {
             .map(|(a, b)| (a, b))
             .collect();
         let state = pairs.iter().collect();
-        let final_pair = *pairs.last().unwrap();
+        let final_letter = pairs.last().unwrap().1;
 
         lines.next();
         let rules = lines.map(|line| {
             let mut parts = line.split(" -> ");
             (key_from(parts.next().unwrap()), value_from(parts.next().unwrap()))
         }).collect();
-        Ok(PolymerIterator {state, final_pair, rules})
+        Ok(PolymerIterator {state, final_letter, rules})
     }
 }
 
@@ -57,26 +57,29 @@ impl Iterator for PolymerIterator {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let result = score_histogram(&self.state, self.final_pair);
+        let result = score_histogram(&self.state, self.final_letter);
         let mut updated_state = HashHistogram::new();
-        for ((a, c), _) in self.state.iter() {
+        for ((a, c), count) in self.state.iter() {
             let b = self.rules.get(&(*a, *c)).unwrap();
-            updated_state.bump(&(*a, *b));
-            updated_state.bump(&(*b, *c));
-            if (*a, *c) == self.final_pair {
-                self.final_pair = (*b, *c);
-            }
+            updated_state.bump_by(&(*a, *b), *count);
+            updated_state.bump_by(&(*b, *c), *count);
         }
+        assert_eq!(self.state.total_count() * 2, updated_state.total_count());
         self.state = updated_state;
         Some(result)
     }
 }
 
-fn score_histogram(pair_counts: &HashHistogram<(char,char)>, final_pair: (char, char)) -> usize {
-    let mut histogram: HashHistogram<char> = pair_counts.iter().map(|((a, _), _)| *a).collect();
-    histogram.bump(&final_pair.1);
+fn score_histogram(pair_counts: &HashHistogram<(char,char)>, final_letter: char) -> usize {
+    let mut histogram = HashHistogram::new();
+    for (pair, count) in pair_counts.iter() {
+        histogram.bump_by(&pair.0, *count);
+    }
+    histogram.bump(&final_letter);
+    assert_eq!(histogram.total_count(), pair_counts.total_count() + 1);
     let ranked = histogram.ranking();
-    histogram.count(&ranked[0]) - histogram.count(&ranked[ranked.len() - 1])
+    let score = histogram.count(&ranked[0]) - histogram.count(&ranked[ranked.len() - 1]);
+    score
 }
 
 #[cfg(test)]
@@ -85,21 +88,10 @@ mod tests {
 
     #[test]
     fn test_example_1() {
-        let polymer = PolymerIterator::new("ex/day14.txt").unwrap();
-        assert_eq!(polymer.skip(10).next().unwrap(), 1588);
-    }
-
-    fn num_pairs_after(start_size: usize, num_steps: usize) -> usize {
-        let mut size = start_size;
-        for _ in 0..num_steps {
-            size = size * 2 - 1
+        for (skip, count) in [(0, 1), (1, 1), (2, 5), (10, 1588)].iter().copied() {
+            let polymer = PolymerIterator::new("ex/day14.txt").unwrap();
+            assert_eq!(polymer.skip(skip).next().unwrap(), count);
         }
-        size
-    }
-
-    #[test]
-    fn ideas() {
-
     }
 }
 
