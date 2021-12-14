@@ -78,8 +78,7 @@ fn score_histogram(pair_counts: &HashHistogram<(char,char)>, final_letter: char)
     histogram.bump(&final_letter);
     assert_eq!(histogram.total_count(), pair_counts.total_count() + 1);
     let ranked = histogram.ranking();
-    let score = histogram.count(&ranked[0]) - histogram.count(&ranked[ranked.len() - 1]);
-    score
+    histogram.count(&ranked[0]) - histogram.count(&ranked[ranked.len() - 1])
 }
 
 #[cfg(test)]
