@@ -7,17 +7,14 @@ fn main() -> io::Result<()> {
     generic_main("day13", &[], &[], |args| {
         let polymer = PolymerIterator::new(args[1].as_str())?;
         println!("Part 1 score: {}", score_after(&polymer, 10));
-        println!("Part 2 score: {}", score_after(&polymer, 40));
+        //println!("Part 2 score: {}", score_after(&polymer, 40));
         Ok(())
     })
 }
 
 fn score_after(polymer: &PolymerIterator, num_steps: usize) -> usize {
     let polymer = polymer.clone();
-    let result = polymer.skip(num_steps).next().unwrap();
-    let histogram: HashHistogram<char> = result.chars().collect();
-    let ranked = histogram.ranking();
-    histogram.count(&ranked[0]) - histogram.count(&ranked[ranked.len() - 1])
+    polymer.skip(num_steps).next().unwrap()
 }
 
 #[derive(Debug, Clone)]
@@ -49,7 +46,7 @@ fn value_from(value_str: &str) -> char {
 }
 
 impl Iterator for PolymerIterator {
-    type Item = String;
+    type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
         let result = self.chain.clone();
@@ -57,10 +54,27 @@ impl Iterator for PolymerIterator {
             .zip(self.chain.chars().skip(1))
             .map(|(a, b)| combine(*self.rules.get(&(a, b)).unwrap(), b))
             .collect::<String>());
-        Some(result)
+        Some(score_for(result))
     }
+}
+
+fn score_for(chain: String) -> usize {
+    let histogram: HashHistogram<char> = chain.chars().collect();
+    let ranked = histogram.ranking();
+    histogram.count(&ranked[0]) - histogram.count(&ranked[ranked.len() - 1])
 }
 
 fn combine(a: char, b: char) -> String {
     format!("{}{}", a, b)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::PolymerIterator;
+
+    #[test]
+    fn test_example_1() {
+        let polymer = PolymerIterator::new("ex/day14.txt").unwrap();
+        assert_eq!(polymer.skip(10).next().unwrap(), 1588);
+    }
 }
