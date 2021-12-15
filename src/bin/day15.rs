@@ -96,14 +96,13 @@ impl RiskMap {
         open_list.enqueue(&start_node);
         let mut goal_node = None;
         search(open_list, |node, queue| {
-            if node.p == goal {
+            if node.p.manhattan_distance(goal) == 0 {
                 goal_node = Some(node.clone());
             } else {
                 for neighbor in node.p.manhattan_neighbors() {
                     if let Some(risk) = self.risk(neighbor) {
                         if !parent_map.contains_key(&neighbor) {
                             let neighbor_node = PriorityNode::new(neighbor, node.cost_so_far + risk, a_star_goal);
-                            //println!("{:?} ({})", neighbor_node, neighbor_node.total_estimated());
                             parent_map.insert(neighbor, Some(node.p));
                             cost_map.insert(neighbor, (neighbor_node.cost_so_far, neighbor_node.total_estimated()));
                             queue.enqueue(&neighbor_node);
@@ -174,22 +173,24 @@ fn path_len_only(goal: Position, parent_map: &BTreeMap<Position, Option<Position
 fn comparison(map: RiskMap) {
     let ((goal_a, cost_a), parent_map_a, cost_map_a) = map.find_path(true);
     let ((goal_d, cost_d), parent_map_d, cost_map_d) = map.find_path(false);
-    println!("A* cost:       {}", cost_a);
-    println!("Dijkstra cost: {}", cost_d);
     let path_a = path(goal_a, &parent_map_a);
     let path_d = path(goal_d, &parent_map_d);
-    match path_a.iter().zip(path_d.iter()).enumerate().find(|(_, (a, d))| **a != **d) {
-        None => println!("The paths are identical"),
-        Some((i, (a, d))) => {
-            let a_pos = Position::from(*a);
-            let a_cost = cost_map_a.get(&a_pos).unwrap();
-            let a_dist = a_pos.manhattan_distance(goal_a);
-            let d_pos = Position::from(*d);
-            let d_cost = cost_map_d.get(&d_pos).unwrap();
-            let d_dist = a_pos.manhattan_distance(goal_d);
-            println!("Diverge at step {}: a*: {:?} ({:?}) ({}), dijkstra: {:?} ({:?}) ({})", i,
-                         a, a_cost, a_dist, d, d_cost, d_dist)
-
+    println!("Differences:");
+    for (i, (a, d)) in path_a.iter().zip(path_d.iter()).enumerate() {
+        let a_pos = Position::from(*a);
+        let a_cost = cost_map_a.get(&a_pos).unwrap();
+        let a_dist = a_pos.manhattan_distance(goal_a);
+        let d_pos = Position::from(*d);
+        let d_cost = cost_map_d.get(&d_pos).unwrap();
+        let d_dist = d_pos.manhattan_distance(goal_d);
+        if a_pos != d_pos {
+            println!("Diverge ({}) at step {}: a*: {:?} ({:?}) ({}), dijkstra: {:?} ({:?}) ({})",
+                if a_dist == d_dist {"Same distance"} else {"Distances differ"},
+                i, a, a_cost, a_dist, d, d_cost, d_dist)
+        } else {
+            println!("Identical at step {}: {:?}", i, a);
         }
     }
+    println!("A* cost:       {} length: {}", cost_a, path_a.len());
+    println!("Dijkstra cost: {} length: {}", cost_d, path_d.len());
 }
