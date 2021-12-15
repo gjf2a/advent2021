@@ -1,25 +1,24 @@
 use std::cmp::Ordering;
 use std::io;
-use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, path_back_from, RowMajorPositionIterator, ManhattanDir, DirType};
+use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType};
 use std::collections::{HashMap, BinaryHeap};
 use std::fmt::{Display, Formatter};
 use bare_metal_modulo::{MNum, ModNumC};
 use common_macros::b_tree_map;
+
+const EXPANSION_FACTOR: usize = 5;
 
 fn main() -> io::Result<()> {
     advent_main(&["(1|2)"], &["-show"], |args| {
         let part = args[2].as_str();
         let mut map = RiskMap::new(args[1].as_str())?;
         if part == "2" {
-            map = map.expand(5);
-            println!("Expanded!");
+            map = map.expand(EXPANSION_FACTOR);
         }
         if args.len() >= 4 {
             println!("{}", map);
         }
-        let path = map.a_star_search();
-        let cost: u128 = path.iter().skip(1).map(|(_, cost)| *cost).sum();
-        println!("Part {} score: {}", part, cost);
+        println!("Part {} score: {}", part, map.a_star_search());
         Ok(())
     })
 }
@@ -75,7 +74,7 @@ impl RiskMap {
         self.risks.get(&p).map(|r| r.risk())
     }
 
-    fn a_star_search(&self) -> Vec<(Position, u128)> {
+    fn a_star_search(&self) -> u128 {
         let mut open_list: BinaryHeap<AStarSearchNode> = BinaryHeap::new();
         let start = Position::new();
         let mut parent_map = b_tree_map! {start => None};
@@ -97,7 +96,7 @@ impl RiskMap {
                 }
             }
         });
-        path_back_from(&goal, &parent_map).iter().map(|node| (*node, self.risk(*node).unwrap())).collect()
+        goal_node.unwrap().cost_so_far
     }
 
     fn points_at<'a>(&'a self, offset: &'a Position) -> impl Iterator<Item=Position> + 'a {
@@ -142,7 +141,6 @@ impl PartialOrd for AStarSearchNode {
     }
 }
 
-// Copied from day 11. Need to refactor.
 impl Display for RiskMap {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for p in RowMajorPositionIterator::new(self.width, self.height) {
