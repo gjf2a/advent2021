@@ -1,6 +1,6 @@
 use std::io;
 use std::collections::HashMap;
-use advent_code_lib::{all_lines, breadth_first_search, advent_main, Position, SearchQueue};
+use advent_code_lib::{breadth_first_search, advent_main, Position, SearchQueue, nums2map};
 
 const MIN_SAFE_HEIGHT: u32 = 9;
 const NUM_LARGEST_BASINS: usize = 3;
@@ -20,14 +20,7 @@ struct HeightMap {
 
 impl HeightMap {
     fn from(filename: &str) -> io::Result<Self> {
-        let mut heights = HashMap::new();
-        for (row, line) in all_lines(filename)?.enumerate() {
-            for (col, height_char) in line.chars().enumerate() {
-                heights.insert(Position::from((col as isize, row as isize)),
-                               height_char.to_digit(10).unwrap());
-            }
-        }
-        Ok(HeightMap {heights})
+        Ok(HeightMap {heights: nums2map(filename)?})
     }
 
     fn risk_level_sum(&self) -> u32 {
