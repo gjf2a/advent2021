@@ -10,16 +10,18 @@ const EXPANSION_FACTOR: usize = 5;
 const SHOW_GRID: &'static str = "-grid";
 const PATH_LEN: &'static str = "-len";
 const PATH: &'static str = "-path";
+const A_STAR: &'static str = "-a*";
 
 fn main() -> io::Result<()> {
-    advent_main(&["(1|2)"], &[SHOW_GRID, PATH_LEN, PATH], |args| {
+    advent_main(&["(1|2)"], &[SHOW_GRID, PATH_LEN, PATH, A_STAR], |args| {
         let part = args[2].as_str();
         let mut map = RiskMap::new(args[1].as_str())?;
         if part == "2" {
             map = map.expand(EXPANSION_FACTOR);
         }
         if args.contains(&SHOW_GRID.to_string()) {println!("{}", map);}
-        let ((goal, cost), parent_map) = map.dijkstra();
+        let use_a_star = args.contains(&A_STAR.to_string());
+        let ((goal, cost), parent_map) = map.find_path(use_a_star);
         if args.contains(&PATH.to_string()) {print_path(goal, &parent_map);}
         if args.contains(&PATH_LEN.to_string()) {path_len_only(goal, &parent_map);}
         println!("Part {} score: {}", part, cost);
@@ -78,12 +80,13 @@ impl RiskMap {
         self.risks.get(&p).map(|r| r.risk())
     }
 
-    fn dijkstra(&self) -> ((Position, u128), BTreeMap<Position,Option<Position>>) {
-        let mut open_list: BinaryHeap<DijkstraNode> = BinaryHeap::new();
+    fn find_path(&self, use_a_star: bool) -> ((Position, u128), BTreeMap<Position,Option<Position>>) {
+        let mut open_list: BinaryHeap<PriorityNode> = BinaryHeap::new();
         let start = Position::new();
         let mut parent_map = b_tree_map! {start => None};
         let goal = Position::from(((self.width - 1) as isize, (self.height - 1) as isize));
-        open_list.enqueue(&DijkstraNode::new(start, 0));
+        let a_star_goal = if use_a_star {Some(goal)} else {None};
+        open_list.enqueue(&PriorityNode::new(start, 0, a_star_goal));
         let mut goal_node = None;
         search(open_list, |node, queue| {
             if node.p == goal {
@@ -92,7 +95,7 @@ impl RiskMap {
                 for neighbor in node.p.manhattan_neighbors() {
                     if let Some(risk) = self.risk(neighbor) {
                         if !parent_map.contains_key(&neighbor) {
-                            let neighbor_node = DijkstraNode::new(neighbor, node.cost_so_far + risk);
+                            let neighbor_node = PriorityNode::new(neighbor, node.cost_so_far + risk, a_star_goal);
                             parent_map.insert(neighbor, Some(node.p));
                             queue.enqueue(&neighbor_node);
                         }
@@ -112,20 +115,25 @@ impl RiskMap {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, Debug)]
-struct DijkstraNode {
+struct PriorityNode {
     p: Position,
-    cost_so_far: u128
+    cost_so_far: u128,
+    goal: Option<Position>
 }
 
-impl DijkstraNode {
-    pub fn new(p: Position, cost_so_far: u128) -> Self {
-        DijkstraNode {p, cost_so_far}
+impl PriorityNode {
+    pub fn new(p: Position, cost_so_far: u128, goal: Option<Position>) -> Self {
+        PriorityNode {p, cost_so_far, goal}
+    }
+
+    pub fn total_estimated(&self) -> u128 {
+        self.cost_so_far + self.goal.map_or(0, |g| g.manhattan_distance(self.p) as u128)
     }
 }
 
-impl PartialOrd for DijkstraNode {
+impl PartialOrd for PriorityNode {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.cost_so_far.partial_cmp(&other.cost_so_far).map(|ord| ord.reverse())
+        self.total_estimated().partial_cmp(&other.total_estimated()).map(|ord| ord.reverse())
     }
 }
 
