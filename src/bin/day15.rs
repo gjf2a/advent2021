@@ -1,24 +1,28 @@
 use std::cmp::Ordering;
 use std::io;
-use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType};
-use std::collections::{HashMap, BinaryHeap};
+use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, path_back_from};
+use std::collections::{HashMap, BinaryHeap, BTreeMap};
 use std::fmt::{Display, Formatter};
 use bare_metal_modulo::{MNum, ModNumC};
 use common_macros::b_tree_map;
 
 const EXPANSION_FACTOR: usize = 5;
+const SHOW_GRID: &'static str = "-grid";
+const PATH_LEN: &'static str = "-len";
+const PATH: &'static str = "-path";
 
 fn main() -> io::Result<()> {
-    advent_main(&["(1|2)"], &["-show"], |args| {
+    advent_main(&["(1|2)"], &[SHOW_GRID, PATH_LEN, PATH], |args| {
         let part = args[2].as_str();
         let mut map = RiskMap::new(args[1].as_str())?;
         if part == "2" {
             map = map.expand(EXPANSION_FACTOR);
         }
-        if args.len() >= 4 {
-            println!("{}", map);
-        }
-        println!("Part {} score: {}", part, map.a_star_search());
+        if args.contains(&SHOW_GRID.to_string()) {println!("{}", map);}
+        let ((goal, cost), parent_map) = map.dijkstra();
+        if args.contains(&PATH.to_string()) {print_path(goal, &parent_map);}
+        if args.contains(&PATH_LEN.to_string()) {path_len_only(goal, &parent_map);}
+        println!("Part {} score: {}", part, cost);
         Ok(())
     })
 }
@@ -74,12 +78,12 @@ impl RiskMap {
         self.risks.get(&p).map(|r| r.risk())
     }
 
-    fn a_star_search(&self) -> u128 {
-        let mut open_list: BinaryHeap<AStarSearchNode> = BinaryHeap::new();
+    fn dijkstra(&self) -> ((Position, u128), BTreeMap<Position,Option<Position>>) {
+        let mut open_list: BinaryHeap<DijkstraNode> = BinaryHeap::new();
         let start = Position::new();
         let mut parent_map = b_tree_map! {start => None};
         let goal = Position::from(((self.width - 1) as isize, (self.height - 1) as isize));
-        open_list.enqueue(&AStarSearchNode::new(start, 0, |p| manhattan_cost_estimate(p, goal)));
+        open_list.enqueue(&DijkstraNode::new(start, 0));
         let mut goal_node = None;
         search(open_list, |node, queue| {
             if node.p == goal {
@@ -88,7 +92,7 @@ impl RiskMap {
                 for neighbor in node.p.manhattan_neighbors() {
                     if let Some(risk) = self.risk(neighbor) {
                         if !parent_map.contains_key(&neighbor) {
-                            let neighbor_node = AStarSearchNode::new(neighbor, node.cost_so_far + risk, |p| manhattan_cost_estimate(p, goal));
+                            let neighbor_node = DijkstraNode::new(neighbor, node.cost_so_far + risk);
                             parent_map.insert(neighbor, Some(node.p));
                             queue.enqueue(&neighbor_node);
                         }
@@ -96,7 +100,8 @@ impl RiskMap {
                 }
             }
         });
-        goal_node.unwrap().cost_so_far
+        let goal_node = goal_node.unwrap();
+        ((goal_node.p, goal_node.cost_so_far), parent_map)
     }
 
     fn points_at<'a>(&'a self, offset: &'a Position) -> impl Iterator<Item=Position> + 'a {
@@ -106,31 +111,21 @@ impl RiskMap {
     }
 }
 
-pub fn manhattan_cost_estimate(p: Position, goal: Position) -> u128 {
-    let manhattan = goal - p;
-    (manhattan.col + manhattan.row) as u128
-}
-
 #[derive(Copy, Clone, Eq, PartialEq, Ord, Debug)]
-pub struct AStarSearchNode {
+struct DijkstraNode {
     p: Position,
-    cost_so_far: u128,
-    heuristic_estimate: u128
+    cost_so_far: u128
 }
 
-impl AStarSearchNode {
-    pub fn new<H: Fn(Position)->u128>(p: Position, cost_so_far: u128, heuristic: H) -> Self {
-        AStarSearchNode {p, cost_so_far, heuristic_estimate: heuristic(p)}
-    }
-
-    pub fn estimated_cost(&self) -> u128 {
-        self.cost_so_far //+ self.heuristic_estimate
+impl DijkstraNode {
+    pub fn new(p: Position, cost_so_far: u128) -> Self {
+        DijkstraNode {p, cost_so_far}
     }
 }
 
-impl PartialOrd for AStarSearchNode {
+impl PartialOrd for DijkstraNode {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match self.estimated_cost().partial_cmp(&other.estimated_cost()) {
+        match self.cost_so_far.partial_cmp(&other.cost_so_far) {
             None => None,
             Some(cmp) => Some(match cmp {
                 Ordering::Less => Ordering::Greater,
@@ -149,4 +144,19 @@ impl Display for RiskMap {
         }
         Ok(())
     }
+}
+
+fn path(goal: Position, parent_map: &BTreeMap<Position, Option<Position>>) -> Vec<(isize, isize)> {
+    path_back_from(&goal, parent_map).iter().map(|p| (p.col, p.row)).collect()
+}
+
+fn print_path(goal: Position, parent_map: &BTreeMap<Position, Option<Position>>) {
+    let path = path(goal, parent_map);
+    println!("{:?}", path);
+    println!("Length: {}", path.len());
+}
+
+fn path_len_only(goal: Position, parent_map: &BTreeMap<Position, Option<Position>>) {
+    let path = path(goal, parent_map);
+    println!("Length: {}", path.len());
 }
