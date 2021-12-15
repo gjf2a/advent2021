@@ -1,6 +1,7 @@
 use std::io;
 use std::collections::HashMap;
 use advent_code_lib::{breadth_first_search, advent_main, Position, SearchQueue, nums2map};
+use bare_metal_modulo::{MNum, ModNumC};
 
 const MIN_SAFE_HEIGHT: u32 = 9;
 const NUM_LARGEST_BASINS: usize = 3;
@@ -15,7 +16,7 @@ fn main() -> io::Result<()> {
 }
 
 struct HeightMap {
-    heights: HashMap<Position, u32>
+    heights: HashMap<Position, ModNumC<u32, 10>>
 }
 
 impl HeightMap {
@@ -24,7 +25,7 @@ impl HeightMap {
     }
 
     fn risk_level_sum(&self) -> u32 {
-        self.low_points().map(|(_, h)| h + 1).sum()
+        self.low_points().map(|(_, h)| h.a() + 1).sum()
     }
 
     fn largest_basin_product(&self) -> usize {
@@ -33,7 +34,7 @@ impl HeightMap {
         (1..=NUM_LARGEST_BASINS).map(|i| basin_sizes[basin_sizes.len() - i]).product()
     }
 
-    fn low_points(&self) -> impl Iterator<Item=(Position,u32)> + '_ {
+    fn low_points(&self) -> impl Iterator<Item=(Position,ModNumC<u32, 10>)> + '_ {
         self.heights.iter()
             .filter(|(p, h)| self.adjacent_location_heights(*p).all(|nh| nh > **h))
             .map(|(p, h)| (*p, *h))
@@ -54,7 +55,7 @@ impl HeightMap {
         self.low_points().map(|(low, _)| self.basin_size_for(&low))
     }
 
-    fn adjacent_location_heights<'a>(&'a self, p: &'a Position) -> impl Iterator<Item=u32> + 'a {
+    fn adjacent_location_heights<'a>(&'a self, p: &'a Position) -> impl Iterator<Item=ModNumC<u32, 10>> + 'a {
         p.manhattan_neighbors().filter_map(|n| self.heights.get(&n).copied())
     }
 }

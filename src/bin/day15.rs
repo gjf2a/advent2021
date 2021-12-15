@@ -2,19 +2,20 @@ use std::cmp::Ordering;
 use std::io;
 use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, path_back_from};
 use std::collections::{HashMap, BinaryHeap, BTreeMap};
+use bare_metal_modulo::{MNum, ModNumC};
 
 fn main() -> io::Result<()> {
     advent_main(&[], &[], |args| {
         let map = RiskMap::new(args[1].as_str())?;
         let path = map.a_star_search();
-        let cost: usize = path.iter().map(|(_, cost)| *cost).sum();
-        println!("Part 1 score: {}", cost - map.risk(Position::new()).unwrap());
+        let cost: usize = path.iter().skip(1).map(|(_, cost)| *cost).sum();
+        println!("Part 1 score: {}", cost);
         Ok(())
     })
 }
 
 struct RiskMap {
-    risks: HashMap<Position, u32>,
+    risks: HashMap<Position, ModNumC<u32, 10>>,
     width: usize,
     height: usize
 }
@@ -27,7 +28,7 @@ impl RiskMap {
     }
 
     fn risk(&self, p: Position) -> Option<usize> {
-        self.risks.get(&p).map(|risk| *risk as usize)
+        self.risks.get(&p).map(|risk| risk.a() as usize)
     }
 
     fn a_star_search(&self) -> Vec<(Position, usize)> {

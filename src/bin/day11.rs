@@ -1,8 +1,7 @@
-use std::cmp::max;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::{Display, Formatter};
 use std::io;
-use advent_code_lib::{all_lines, advent_main, Position, RowMajorPositionIterator, search};
+use advent_code_lib::{advent_main, Position, RowMajorPositionIterator, search, nums2map, map_width_height};
 use bare_metal_modulo::{MNum, ModNumC};
 
 fn main() -> io::Result<()> {
@@ -56,17 +55,8 @@ struct DumboOctopi {
 
 impl DumboOctopi {
     fn new(filename: &str) -> io::Result<DumboOctopi> {
-        let mut width = 0;
-        let mut height = 0;
-        let mut energies = HashMap::new();
-        all_lines(filename)?.enumerate()
-            .for_each(|(row, row_chars)| row_chars.chars().enumerate()
-                .for_each(|(col, energy)| {
-                    energies.insert(Position::from((col as isize, row as isize)),
-                                    ModNumC::new(energy.to_digit(10).unwrap()));
-                    width = max(width, col + 1);
-                    height = max(height, row + 1);
-                }));
+        let energies = nums2map(filename)?;
+        let (width, height) = map_width_height(&energies);
         Ok(DumboOctopi {energies, width, height})
     }
 
