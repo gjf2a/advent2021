@@ -13,7 +13,7 @@ fn main() -> io::Result<()> {
             println!("Expanded!");
         }
         let path = map.a_star_search();
-        let cost: usize = path.iter().skip(1).map(|(_, cost)| *cost).sum();
+        let cost: u128 = path.iter().skip(1).map(|(_, cost)| *cost).sum();
         println!("Part {} score: {}", part, cost);
         Ok(())
     })
@@ -41,7 +41,7 @@ impl RiskMap {
                 let (successor, s_risk) = node;
                 expanded_risks.insert(*successor, *s_risk);
                 for neighbor in successor.manhattan_neighbors() {
-                    if neighbor.col >= p.col && neighbor.row <= p.row &&
+                    if neighbor.col >= p.col && neighbor.row >= p.row &&
                         neighbor.col < p.col + expansion_factor &&
                         neighbor.row < p.row + expansion_factor {
                         let mut neighbor_risk = *s_risk + 1;
@@ -57,11 +57,11 @@ impl RiskMap {
         self.risks = expanded_risks;
     }
 
-    fn risk(&self, p: Position) -> Option<usize> {
-        self.risks.get(&p).map(|risk| risk.a() as usize)
+    fn risk(&self, p: Position) -> Option<u128> {
+        self.risks.get(&p).map(|risk| risk.a() as u128)
     }
 
-    fn a_star_search(&self) -> Vec<(Position, usize)> {
+    fn a_star_search(&self) -> Vec<(Position, u128)> {
         let mut open_list: BinaryHeap<AStarSearchNode> = BinaryHeap::new();
         let start = Position::new();
         let mut visited = BTreeMap::new();
@@ -89,24 +89,24 @@ impl RiskMap {
 }
 
 
-pub fn manhattan_cost_estimate(p: Position, goal: Position) -> usize {
+pub fn manhattan_cost_estimate(p: Position, goal: Position) -> u128 {
     let manhattan = goal - p;
-    (manhattan.col + manhattan.row) as usize
+    (manhattan.col + manhattan.row) as u128
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, Debug)]
 pub struct AStarSearchNode {
     p: Position,
-    cost_so_far: usize,
-    heuristic_estimate: usize
+    cost_so_far: u128,
+    heuristic_estimate: u128
 }
 
 impl AStarSearchNode {
-    pub fn new<H: Fn(Position)->usize>(p: Position, cost_so_far: usize, heuristic: H) -> Self {
+    pub fn new<H: Fn(Position)->u128>(p: Position, cost_so_far: u128, heuristic: H) -> Self {
         AStarSearchNode {p, cost_so_far, heuristic_estimate: heuristic(p)}
     }
 
-    pub fn estimated_cost(&self) -> usize {
+    pub fn estimated_cost(&self) -> u128 {
         self.cost_so_far + self.heuristic_estimate
     }
 }
