@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::io;
-use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, path_back_from, ParentMapQueue};
-use std::collections::{HashMap, BinaryHeap, BTreeMap, VecDeque};
+use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, path_back_from, breadth_first_search};
+use std::collections::{HashMap, BinaryHeap, BTreeMap};
 use bare_metal_modulo::{MNum, ModNumC};
 
 fn main() -> io::Result<()> {
@@ -9,7 +9,7 @@ fn main() -> io::Result<()> {
         let part = args[2].as_str();
         let mut map = RiskMap::new(args[1].as_str())?;
         if part == "2" {
-            map.expand(5);
+            map = map.expand(5);
             println!("Expanded!");
         }
         let path = map.a_star_search();
@@ -28,16 +28,18 @@ struct RiskMap {
 impl RiskMap {
     fn new(filename: &str) -> io::Result<Self> {
         let risks = nums2map(filename)?;
-        let (width, height) = map_width_height(&risks);
-        Ok(RiskMap {risks, width: width, height: height})
+        Ok(Self::from(risks))
     }
 
-    fn expand(&mut self, expansion_factor: isize) {
+    fn from(risks: HashMap<Position, ModNumC<u32, 10>>) -> Self {
+        let (width, height) = map_width_height(&risks);
+        RiskMap {risks, width, height}
+    }
+
+    fn expand(&self, expansion_factor: isize) -> Self {
         let mut expanded_risks = HashMap::new();
         for (p, risk) in self.risks.iter() {
-            let mut queue: ParentMapQueue<(Position,ModNumC<u32, 10>), VecDeque<(Position, ModNumC<u32, 10>)>> = ParentMapQueue::new();
-            queue.enqueue(&(*p, *risk));
-            search(queue, |node, queue| {
+            breadth_first_search(&(*p, *risk), |node, queue| {
                 let (successor, s_risk) = node;
                 expanded_risks.insert(*successor, *s_risk);
                 for neighbor in successor.manhattan_neighbors() {
@@ -50,11 +52,10 @@ impl RiskMap {
                         }
                         queue.enqueue(&(neighbor, neighbor_risk));
                     }
-
                 }
             });
         }
-        self.risks = expanded_risks;
+        Self::from(expanded_risks)
     }
 
     fn risk(&self, p: Position) -> Option<u128> {
