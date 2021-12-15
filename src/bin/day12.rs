@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Display, Formatter};
 use std::io;
-use advent_code_lib::{AdjacencySets, all_lines, Arena, breadth_first_search, advent_main, SearchQueue};
+use advent_code_lib::{AdjacencySets, all_lines, Arena, breadth_first_search, advent_main, SearchQueue, ContinueSearch};
 use common_macros::b_tree_set;
 use hash_histogram::HashHistogram;
 
@@ -69,6 +69,7 @@ impl PathTable {
                     }
                 }
             }
+            ContinueSearch::Yes
         });
 
         PathTable {table, arena}

@@ -1,6 +1,6 @@
 use std::io;
 use std::collections::HashMap;
-use advent_code_lib::{breadth_first_search, advent_main, Position, SearchQueue, nums2map};
+use advent_code_lib::{breadth_first_search, advent_main, Position, SearchQueue, nums2map, ContinueSearch};
 use bare_metal_modulo::{MNum, ModNumC};
 
 const MIN_SAFE_HEIGHT: u32 = 9;
@@ -42,12 +42,14 @@ impl HeightMap {
 
     fn basin_size_for(&self, p: &Position) -> usize {
         breadth_first_search(p,
-                             |c, q|
+                             |c, q| {
                                  for n in c.manhattan_neighbors()
                                      .filter(|n| self.heights.get(n)
                                          .map_or(false, |h| *h < MIN_SAFE_HEIGHT)) {
                                      q.enqueue(&n);
-                                 })
+                                 }
+                                 ContinueSearch::Yes
+                             })
             .len()
     }
 

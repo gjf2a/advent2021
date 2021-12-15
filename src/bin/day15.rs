@@ -1,35 +1,25 @@
 use std::cmp::Ordering;
 use std::io;
-use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, path_back_from};
-use std::collections::{HashMap, BinaryHeap, BTreeMap};
+use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch};
+use std::collections::{HashMap, BinaryHeap};
 use std::fmt::{Display, Formatter};
 use bare_metal_modulo::{MNum, ModNumC};
-use common_macros::b_tree_map;
+use common_macros::b_tree_set;
 
 const EXPANSION_FACTOR: usize = 5;
 const SHOW_GRID: &'static str = "-grid";
-const PATH_LEN: &'static str = "-len";
-const PATH: &'static str = "-path";
 const A_STAR: &'static str = "-a*";
-const COMPARE: &'static str = "-compare";
 
 fn main() -> io::Result<()> {
-    advent_main(&["(1|2)"], &[SHOW_GRID, PATH_LEN, PATH, A_STAR, COMPARE], |args| {
+    advent_main(&["(1|2)"], &[SHOW_GRID, A_STAR], |args| {
         let part = args[2].as_str();
         let mut map = RiskMap::new(args[1].as_str())?;
         if part == "2" {
             map = map.expand(EXPANSION_FACTOR);
         }
-        if args.contains(&COMPARE.to_string()) {
-            comparison(map)
-        } else {
-            if args.contains(&SHOW_GRID.to_string()) { println!("{}", map); }
-            let use_a_star = args.contains(&A_STAR.to_string());
-            let ((goal, cost), parent_map, _) = map.find_path(use_a_star);
-            if args.contains(&PATH.to_string()) { print_path(goal, &parent_map); }
-            if args.contains(&PATH_LEN.to_string()) { path_len_only(goal, &parent_map); }
-            println!("Part {} score: {}", part, cost);
-        }
+        if args.contains(&SHOW_GRID.to_string()) { println!("{}", map); }
+        let use_a_star = args.contains(&A_STAR.to_string());
+        println!("Part {} score: {}", part, map.path_cost(use_a_star));
         Ok(())
     })
 }
@@ -85,34 +75,33 @@ impl RiskMap {
         self.risks.get(&p).map(|r| r.risk())
     }
 
-    fn find_path(&self, use_a_star: bool) -> ((Position, u128), BTreeMap<Position,Option<Position>>, BTreeMap<Position,(u128,u128)>) {
-        let mut open_list: BinaryHeap<PriorityNode> = BinaryHeap::new();
-        let start = Position::new();
-        let mut parent_map = b_tree_map! {start => None};
+    fn path_cost(&self, use_a_star: bool) -> u128 {
         let goal = Position::from(((self.width - 1) as isize, (self.height - 1) as isize));
         let a_star_goal = if use_a_star {Some(goal)} else {None};
-        let start_node = PriorityNode::new(start, 0, a_star_goal);
-        let mut cost_map = b_tree_map! {start => (0, start_node.total_estimated())};
+        let start_node = PriorityNode::new(Position::new(), 0, a_star_goal);
+        let mut open_list: BinaryHeap<PriorityNode> = BinaryHeap::new();
         open_list.enqueue(&start_node);
-        let mut goal_node = None;
+        let mut visited = b_tree_set! {start_node.p};
+        let mut cost_at_goal = None;
         search(open_list, |node, queue| {
-            if node.p.manhattan_distance(goal) == 0 {
-                goal_node = Some(node.clone());
+            visited.insert(node.p);
+            if node.p == goal {
+                cost_at_goal = Some(node.cost_so_far);
+                ContinueSearch::No
             } else {
                 for neighbor in node.p.manhattan_neighbors() {
                     if let Some(risk) = self.risk(neighbor) {
-                        if !parent_map.contains_key(&neighbor) {
+                        if !visited.contains(&neighbor) {
+                            if !use_a_star {visited.insert(neighbor);}
                             let neighbor_node = PriorityNode::new(neighbor, node.cost_so_far + risk, a_star_goal);
-                            parent_map.insert(neighbor, Some(node.p));
-                            cost_map.insert(neighbor, (neighbor_node.cost_so_far, neighbor_node.total_estimated()));
                             queue.enqueue(&neighbor_node);
                         }
                     }
                 }
+                ContinueSearch::Yes
             }
         });
-        let goal_node = goal_node.unwrap();
-        ((goal_node.p, goal_node.cost_so_far), parent_map, cost_map)
+        cost_at_goal.unwrap()
     }
 
     fn points_at<'a>(&'a self, offset: &'a Position) -> impl Iterator<Item=Position> + 'a {
@@ -153,44 +142,4 @@ impl Display for RiskMap {
         }
         Ok(())
     }
-}
-
-fn path(goal: Position, parent_map: &BTreeMap<Position, Option<Position>>) -> Vec<(isize, isize)> {
-    path_back_from(&goal, parent_map).iter().map(|p| (p.col, p.row)).collect()
-}
-
-fn print_path(goal: Position, parent_map: &BTreeMap<Position, Option<Position>>) {
-    let path = path(goal, parent_map);
-    println!("{:?}", path);
-    println!("Length: {}", path.len());
-}
-
-fn path_len_only(goal: Position, parent_map: &BTreeMap<Position, Option<Position>>) {
-    let path = path(goal, parent_map);
-    println!("Length: {}", path.len());
-}
-
-fn comparison(map: RiskMap) {
-    let ((goal_a, cost_a), parent_map_a, cost_map_a) = map.find_path(true);
-    let ((goal_d, cost_d), parent_map_d, cost_map_d) = map.find_path(false);
-    let path_a = path(goal_a, &parent_map_a);
-    let path_d = path(goal_d, &parent_map_d);
-    println!("Differences:");
-    for (i, (a, d)) in path_a.iter().zip(path_d.iter()).enumerate() {
-        let a_pos = Position::from(*a);
-        let a_cost = cost_map_a.get(&a_pos).unwrap();
-        let a_dist = a_pos.manhattan_distance(goal_a);
-        let d_pos = Position::from(*d);
-        let d_cost = cost_map_d.get(&d_pos).unwrap();
-        let d_dist = d_pos.manhattan_distance(goal_d);
-        if a_pos != d_pos {
-            println!("Diverge ({}) at step {}: a*: {:?} ({:?}) ({}), dijkstra: {:?} ({:?}) ({})",
-                if a_dist == d_dist {"Same distance"} else {"Distances differ"},
-                i, a, a_cost, a_dist, d, d_cost, d_dist)
-        } else {
-            println!("Identical at step {}: {:?}", i, a);
-        }
-    }
-    println!("A* cost:       {} length: {}", cost_a, path_a.len());
-    println!("Dijkstra cost: {} length: {}", cost_d, path_d.len());
 }

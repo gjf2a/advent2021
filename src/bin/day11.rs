@@ -1,7 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::fmt::{Display, Formatter};
 use std::io;
-use advent_code_lib::{advent_main, Position, RowMajorPositionIterator, search, nums2map, map_width_height};
+use advent_code_lib::{advent_main, Position, RowMajorPositionIterator, search, nums2map, map_width_height, ContinueSearch};
 use bare_metal_modulo::{MNum, ModNumC};
 
 fn main() -> io::Result<()> {
@@ -93,7 +93,9 @@ impl Iterator for DumboOctopi {
         }
 
         let result = search(self.just_flashed().collect(),
-                            |flasher, q| self.enqueue_flashed_neighbors(*flasher, q));
+                            |flasher, q| {
+                                self.enqueue_flashed_neighbors(*flasher, q);
+                                ContinueSearch::Yes});
         Some(*result.dequeued())
     }
 }
