@@ -1,17 +1,21 @@
 use std::cmp::Ordering;
 use std::io;
-use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, path_back_from, breadth_first_search};
+use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, path_back_from, RowMajorPositionIterator, ManhattanDir, DirType};
 use std::collections::{HashMap, BinaryHeap};
+use std::fmt::{Display, Formatter};
 use bare_metal_modulo::{MNum, ModNumC};
 use common_macros::b_tree_map;
 
 fn main() -> io::Result<()> {
-    advent_main(&["(1|2)"], &[], |args| {
+    advent_main(&["(1|2)"], &["-show"], |args| {
         let part = args[2].as_str();
         let mut map = RiskMap::new(args[1].as_str())?;
         if part == "2" {
             map = map.expand(5);
             println!("Expanded!");
+        }
+        if args.len() >= 4 {
+            println!("{}", map);
         }
         let path = map.a_star_search();
         let cost: u128 = path.iter().skip(1).map(|(_, cost)| *cost).sum();
@@ -20,48 +24,55 @@ fn main() -> io::Result<()> {
     })
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+struct Risk {
+    risk: ModNumC<u128, 9>
+}
+
+impl Risk {
+    fn from(risk: ModNumC<u32, 10>) -> Self {
+        Risk {risk: ModNumC::new(risk.a() as u128 - 1)}
+    }
+
+    fn risk(&self) -> u128 {1 + self.risk.a()}
+
+    fn bump(&self) -> Self {Risk {risk: self.risk + 1}}
+}
+
+#[derive(Clone)]
 struct RiskMap {
-    risks: HashMap<Position, ModNumC<u32, 10>>,
+    risks: HashMap<Position, Risk>,
     width: usize,
     height: usize
 }
 
 impl RiskMap {
     fn new(filename: &str) -> io::Result<Self> {
-        let risks = nums2map(filename)?;
-        Ok(Self::from(risks))
+        Ok(Self::from(nums2map(filename)?.iter()
+            .map(|(p,r)| (*p, Risk::from(*r)))
+            .collect()))
     }
 
-    fn from(risks: HashMap<Position, ModNumC<u32, 10>>) -> Self {
+    fn from(risks: HashMap<Position, Risk>) -> Self {
         let (width, height) = map_width_height(&risks);
         RiskMap {risks, width, height}
     }
 
-    // This was cool. Too bad I misunderstood the instructions.
-    fn expand(&self, expansion_factor: isize) -> Self {
-        let mut expanded_risks = HashMap::new();
-        for (p, risk) in self.risks.iter() {
-            breadth_first_search(&(*p, *risk), |node, queue| {
-                let (successor, s_risk) = node;
-                expanded_risks.insert(*successor, *s_risk);
-                for neighbor in successor.manhattan_neighbors() {
-                    if neighbor.col >= p.col && neighbor.row >= p.row &&
-                        neighbor.col < p.col + expansion_factor &&
-                        neighbor.row < p.row + expansion_factor {
-                        let mut neighbor_risk = *s_risk + 1;
-                        if neighbor_risk == 0 {
-                            neighbor_risk += 1;
-                        }
-                        queue.enqueue(&(neighbor, neighbor_risk));
-                    }
-                }
-            });
+    fn expand(&self, expansion_factor: usize) -> Self {
+        let mut expanded_risks = self.risks.clone();
+        for offset in RowMajorPositionIterator::new(expansion_factor, expansion_factor).skip(1) {
+            let prev_dir = if offset.col == 0 {ManhattanDir::N} else {ManhattanDir::W};
+            let prev_offset = prev_dir.next(offset);
+            let prev_points = self.points_at(&prev_offset);
+            for (old_point, new_point) in prev_points.zip(self.points_at(&offset)) {
+                expanded_risks.insert(new_point, expanded_risks.get(&old_point).unwrap().bump());
+            }
         }
-        Self::from(expanded_risks)
+        RiskMap::from(expanded_risks)
     }
 
     fn risk(&self, p: Position) -> Option<u128> {
-        self.risks.get(&p).map(|risk| risk.a() as u128)
+        self.risks.get(&p).map(|r| r.risk())
     }
 
     fn a_star_search(&self) -> Vec<(Position, u128)> {
@@ -88,8 +99,13 @@ impl RiskMap {
         });
         path_back_from(&goal, &parent_map).iter().map(|node| (*node, self.risk(*node).unwrap())).collect()
     }
-}
 
+    fn points_at<'a>(&'a self, offset: &'a Position) -> impl Iterator<Item=Position> + 'a {
+        self.risks.iter().map(|(p, _)|
+            Position::from((p.col + offset.col * self.width as isize,
+                            p.row + offset.row * self.height as isize)))
+    }
+}
 
 pub fn manhattan_cost_estimate(p: Position, goal: Position) -> u128 {
     let manhattan = goal - p;
@@ -123,5 +139,16 @@ impl PartialOrd for AStarSearchNode {
                 Ordering::Greater => Ordering::Less
             })
         }
+    }
+}
+
+// Copied from day 11. Need to refactor.
+impl Display for RiskMap {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for p in RowMajorPositionIterator::new(self.width, self.height) {
+            if p.col == 0 && p.row > 0 {writeln!(f)?;}
+            write!(f, "{}", self.risks.get(&p).unwrap().risk())?
+        }
+        Ok(())
     }
 }
