@@ -1,10 +1,9 @@
 use std::cmp::Ordering;
 use std::io;
 use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch};
-use std::collections::{HashMap, BinaryHeap};
+use std::collections::{HashMap, BinaryHeap, BTreeMap};
 use std::fmt::{Display, Formatter};
 use bare_metal_modulo::{MNum, ModNumC};
-use common_macros::b_tree_set;
 
 const EXPANSION_FACTOR: usize = 5;
 const SHOW_GRID: &'static str = "-grid";
@@ -81,19 +80,19 @@ impl RiskMap {
         let start_node = PriorityNode::new(Position::new(), 0, a_star_goal);
         let mut open_list: BinaryHeap<PriorityNode> = BinaryHeap::new();
         open_list.enqueue(&start_node);
-        let mut visited = b_tree_set! {start_node.p};
+        let mut visited = VisitTracker::new();
+        visited.record_visit(&start_node);
         let mut cost_at_goal = None;
         search(open_list, |node, queue| {
-            visited.insert(node.p);
             if node.p == goal {
                 cost_at_goal = Some(node.cost_so_far);
                 ContinueSearch::No
             } else {
                 for neighbor in node.p.manhattan_neighbors() {
                     if let Some(risk) = self.risk(neighbor) {
-                        if !visited.contains(&neighbor) {
-                            if !use_a_star {visited.insert(neighbor);}
-                            let neighbor_node = PriorityNode::new(neighbor, node.cost_so_far + risk, a_star_goal);
+                        let neighbor_node = PriorityNode::new(neighbor, node.cost_so_far + risk, a_star_goal);
+                        if visited.should_visit(&neighbor_node) {
+                            visited.record_visit(&neighbor_node);
                             queue.enqueue(&neighbor_node);
                         }
                     }
@@ -141,5 +140,26 @@ impl Display for RiskMap {
             write!(f, "{}", self.risks.get(&p).unwrap().risk())?
         }
         Ok(())
+    }
+}
+
+struct VisitTracker {
+    visited: BTreeMap<Position, u128>
+}
+
+impl VisitTracker {
+    fn new() -> Self {
+        VisitTracker {visited: BTreeMap::new()}
+    }
+
+    fn should_visit(&self, node: &PriorityNode) -> bool {
+        match self.visited.get(&node.p) {
+            None => true,
+            Some(prev_count) => node.cost_so_far < *prev_count
+        }
+    }
+
+    fn record_visit(&mut self, node: &PriorityNode) {
+        self.visited.insert(node.p, node.cost_so_far);
     }
 }
