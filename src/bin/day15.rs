@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 use std::io;
-use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch};
+use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch, SearchResult};
 use std::collections::{HashMap, BinaryHeap, BTreeMap};
 use std::fmt::{Display, Formatter};
 use bare_metal_modulo::{MNum, ModNumC};
@@ -8,9 +8,10 @@ use bare_metal_modulo::{MNum, ModNumC};
 const EXPANSION_FACTOR: usize = 5;
 const SHOW_GRID: &'static str = "-grid";
 const A_STAR: &'static str = "-a*";
+const STATS: &'static str = "-stats";
 
 fn main() -> io::Result<()> {
-    advent_main(&["(1|2)"], &[SHOW_GRID, A_STAR], |args| {
+    advent_main(&["(1|2)"], &[SHOW_GRID, A_STAR, STATS], |args| {
         let part = args[2].as_str();
         let mut map = RiskMap::new(args[1].as_str())?;
         if part == "2" {
@@ -18,7 +19,11 @@ fn main() -> io::Result<()> {
         }
         if args.contains(&SHOW_GRID.to_string()) { println!("{}", map); }
         let use_a_star = args.contains(&A_STAR.to_string());
-        println!("Part {} score: {}", part, map.path_cost(use_a_star));
+        let (cost, result) = map.path_cost(use_a_star);
+        println!("Part {} score: {}", part, cost);
+        if args.contains(&STATS.to_string()) {
+            println!("Enqueued: {} Dequeued: {}", result.enqueued(), result.dequeued());
+        }
         Ok(())
     })
 }
@@ -74,7 +79,7 @@ impl RiskMap {
         self.risks.get(&p).map(|r| r.risk())
     }
 
-    fn path_cost(&self, use_a_star: bool) -> u128 {
+    fn path_cost(&self, use_a_star: bool) -> (u128, SearchResult<BinaryHeap<PriorityNode>>) {
         let goal = Position::from(((self.width - 1) as isize, (self.height - 1) as isize));
         let a_star_goal = if use_a_star {Some(goal)} else {None};
         let start_node = PriorityNode::new(Position::new(), 0, a_star_goal);
@@ -83,7 +88,7 @@ impl RiskMap {
         let mut visited = VisitTracker::new();
         visited.record_visit(&start_node);
         let mut cost_at_goal = None;
-        search(open_list, |node, queue| {
+        let search_result = search(open_list, |node, queue| {
             if node.p == goal {
                 cost_at_goal = Some(node.cost_so_far);
                 ContinueSearch::No
@@ -100,7 +105,7 @@ impl RiskMap {
                 ContinueSearch::Yes
             }
         });
-        cost_at_goal.unwrap()
+        (cost_at_goal.unwrap(), search_result)
     }
 
     fn points_at<'a>(&'a self, offset: &'a Position) -> impl Iterator<Item=Position> + 'a {
