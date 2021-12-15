@@ -11,20 +11,25 @@ const SHOW_GRID: &'static str = "-grid";
 const PATH_LEN: &'static str = "-len";
 const PATH: &'static str = "-path";
 const A_STAR: &'static str = "-a*";
+const COMPARE: &'static str = "-compare";
 
 fn main() -> io::Result<()> {
-    advent_main(&["(1|2)"], &[SHOW_GRID, PATH_LEN, PATH, A_STAR], |args| {
+    advent_main(&["(1|2)"], &[SHOW_GRID, PATH_LEN, PATH, A_STAR, COMPARE], |args| {
         let part = args[2].as_str();
         let mut map = RiskMap::new(args[1].as_str())?;
         if part == "2" {
             map = map.expand(EXPANSION_FACTOR);
         }
-        if args.contains(&SHOW_GRID.to_string()) {println!("{}", map);}
-        let use_a_star = args.contains(&A_STAR.to_string());
-        let ((goal, cost), parent_map) = map.find_path(use_a_star);
-        if args.contains(&PATH.to_string()) {print_path(goal, &parent_map);}
-        if args.contains(&PATH_LEN.to_string()) {path_len_only(goal, &parent_map);}
-        println!("Part {} score: {}", part, cost);
+        if args.contains(&COMPARE.to_string()) {
+            comparison(map)
+        } else {
+            if args.contains(&SHOW_GRID.to_string()) { println!("{}", map); }
+            let use_a_star = args.contains(&A_STAR.to_string());
+            let ((goal, cost), parent_map, _) = map.find_path(use_a_star);
+            if args.contains(&PATH.to_string()) { print_path(goal, &parent_map); }
+            if args.contains(&PATH_LEN.to_string()) { path_len_only(goal, &parent_map); }
+            println!("Part {} score: {}", part, cost);
+        }
         Ok(())
     })
 }
@@ -41,7 +46,7 @@ impl Risk {
 
     fn risk(&self) -> u128 {1 + self.risk.a()}
 
-    fn bump(&self) -> Self {Risk {risk: self.risk + 1}}
+    fn bumped(&self) -> Self {Risk {risk: self.risk + 1}}
 }
 
 #[derive(Clone)]
@@ -70,7 +75,7 @@ impl RiskMap {
             let prev_offset = prev_dir.next(offset);
             let prev_points = self.points_at(&prev_offset);
             for (old_point, new_point) in prev_points.zip(self.points_at(&offset)) {
-                expanded_risks.insert(new_point, expanded_risks.get(&old_point).unwrap().bump());
+                expanded_risks.insert(new_point, expanded_risks.get(&old_point).unwrap().bumped());
             }
         }
         RiskMap::from(expanded_risks)
@@ -80,13 +85,15 @@ impl RiskMap {
         self.risks.get(&p).map(|r| r.risk())
     }
 
-    fn find_path(&self, use_a_star: bool) -> ((Position, u128), BTreeMap<Position,Option<Position>>) {
+    fn find_path(&self, use_a_star: bool) -> ((Position, u128), BTreeMap<Position,Option<Position>>, BTreeMap<Position,(u128,u128)>) {
         let mut open_list: BinaryHeap<PriorityNode> = BinaryHeap::new();
         let start = Position::new();
         let mut parent_map = b_tree_map! {start => None};
         let goal = Position::from(((self.width - 1) as isize, (self.height - 1) as isize));
         let a_star_goal = if use_a_star {Some(goal)} else {None};
-        open_list.enqueue(&PriorityNode::new(start, 0, a_star_goal));
+        let start_node = PriorityNode::new(start, 0, a_star_goal);
+        let mut cost_map = b_tree_map! {start => (0, start_node.total_estimated())};
+        open_list.enqueue(&start_node);
         let mut goal_node = None;
         search(open_list, |node, queue| {
             if node.p == goal {
@@ -96,7 +103,9 @@ impl RiskMap {
                     if let Some(risk) = self.risk(neighbor) {
                         if !parent_map.contains_key(&neighbor) {
                             let neighbor_node = PriorityNode::new(neighbor, node.cost_so_far + risk, a_star_goal);
+                            //println!("{:?} ({})", neighbor_node, neighbor_node.total_estimated());
                             parent_map.insert(neighbor, Some(node.p));
+                            cost_map.insert(neighbor, (neighbor_node.cost_so_far, neighbor_node.total_estimated()));
                             queue.enqueue(&neighbor_node);
                         }
                     }
@@ -104,7 +113,7 @@ impl RiskMap {
             }
         });
         let goal_node = goal_node.unwrap();
-        ((goal_node.p, goal_node.cost_so_far), parent_map)
+        ((goal_node.p, goal_node.cost_so_far), parent_map, cost_map)
     }
 
     fn points_at<'a>(&'a self, offset: &'a Position) -> impl Iterator<Item=Position> + 'a {
@@ -160,4 +169,27 @@ fn print_path(goal: Position, parent_map: &BTreeMap<Position, Option<Position>>)
 fn path_len_only(goal: Position, parent_map: &BTreeMap<Position, Option<Position>>) {
     let path = path(goal, parent_map);
     println!("Length: {}", path.len());
+}
+
+fn comparison(map: RiskMap) {
+    let ((goal_a, cost_a), parent_map_a, cost_map_a) = map.find_path(true);
+    let ((goal_d, cost_d), parent_map_d, cost_map_d) = map.find_path(false);
+    println!("A* cost:       {}", cost_a);
+    println!("Dijkstra cost: {}", cost_d);
+    let path_a = path(goal_a, &parent_map_a);
+    let path_d = path(goal_d, &parent_map_d);
+    match path_a.iter().zip(path_d.iter()).enumerate().find(|(_, (a, d))| **a != **d) {
+        None => println!("The paths are identical"),
+        Some((i, (a, d))) => {
+            let a_pos = Position::from(*a);
+            let a_cost = cost_map_a.get(&a_pos).unwrap();
+            let a_dist = a_pos.manhattan_distance(goal_a);
+            let d_pos = Position::from(*d);
+            let d_cost = cost_map_d.get(&d_pos).unwrap();
+            let d_dist = a_pos.manhattan_distance(goal_d);
+            println!("Diverge at step {}: a*: {:?} ({:?}) ({}), dijkstra: {:?} ({:?}) ({})", i,
+                         a, a_cost, a_dist, d, d_cost, d_dist)
+
+        }
+    }
 }
