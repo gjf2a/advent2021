@@ -1,8 +1,9 @@
 use std::cmp::Ordering;
 use std::io;
 use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, path_back_from, breadth_first_search};
-use std::collections::{HashMap, BinaryHeap, BTreeMap};
+use std::collections::{HashMap, BinaryHeap};
 use bare_metal_modulo::{MNum, ModNumC};
+use common_macros::b_tree_map;
 
 fn main() -> io::Result<()> {
     advent_main(&["(1|2)"], &[], |args| {
@@ -36,6 +37,7 @@ impl RiskMap {
         RiskMap {risks, width, height}
     }
 
+    // This was cool. Too bad I misunderstood the instructions.
     fn expand(&self, expansion_factor: isize) -> Self {
         let mut expanded_risks = HashMap::new();
         for (p, risk) in self.risks.iter() {
@@ -65,8 +67,7 @@ impl RiskMap {
     fn a_star_search(&self) -> Vec<(Position, u128)> {
         let mut open_list: BinaryHeap<AStarSearchNode> = BinaryHeap::new();
         let start = Position::new();
-        let mut visited = BTreeMap::new();
-        visited.insert(start, None);
+        let mut parent_map = b_tree_map! {start => None};
         let goal = Position::from(((self.width - 1) as isize, (self.height - 1) as isize));
         open_list.enqueue(&AStarSearchNode::new(start, 0, |p| manhattan_cost_estimate(p, goal)));
         let mut goal_node = None;
@@ -76,16 +77,16 @@ impl RiskMap {
             } else {
                 for neighbor in node.p.manhattan_neighbors() {
                     if let Some(risk) = self.risk(neighbor) {
-                        if !visited.contains_key(&neighbor) {
+                        if !parent_map.contains_key(&neighbor) {
                             let neighbor_node = AStarSearchNode::new(neighbor, node.cost_so_far + risk, |p| manhattan_cost_estimate(p, goal));
-                            visited.insert(neighbor, Some(node.p));
+                            parent_map.insert(neighbor, Some(node.p));
                             queue.enqueue(&neighbor_node);
                         }
                     }
                 }
             }
         });
-        path_back_from(&goal, &visited).iter().map(|node| (*node, self.risk(*node).unwrap())).collect()
+        path_back_from(&goal, &parent_map).iter().map(|node| (*node, self.risk(*node).unwrap())).collect()
     }
 }
 
