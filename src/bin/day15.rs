@@ -124,7 +124,7 @@ impl AStarSearchNode {
     }
 
     pub fn estimated_cost(&self) -> u128 {
-        self.cost_so_far + self.heuristic_estimate
+        self.cost_so_far //+ self.heuristic_estimate
     }
 }
 
