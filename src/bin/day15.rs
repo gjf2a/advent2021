@@ -125,14 +125,7 @@ impl DijkstraNode {
 
 impl PartialOrd for DijkstraNode {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match self.cost_so_far.partial_cmp(&other.cost_so_far) {
-            None => None,
-            Some(cmp) => Some(match cmp {
-                Ordering::Less => Ordering::Greater,
-                Ordering::Equal => cmp,
-                Ordering::Greater => Ordering::Less
-            })
-        }
+        self.cost_so_far.partial_cmp(&other.cost_so_far).map(|ord| ord.reverse())
     }
 }
 
