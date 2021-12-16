@@ -61,8 +61,7 @@ impl FromStr for Packet {
     type Err = io::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (packet, size) = parse_next_packet(&mut hex2binary(s)?.chars())?;
-        println!("Size: {}", size);
+        let (packet, _size) = parse_next_packet(&mut hex2binary(s)?.chars())?;
         Ok(packet)
     }
 }
@@ -103,9 +102,7 @@ fn parse_operator(iter: &mut Chars) -> io::Result<(Vec<Packet>, usize)> {
             let mut length = bits2bigint(iter, SUB_PACKETS_LENGTH)?;
             bits_used += SUB_PACKETS_LENGTH;
             while length > BigUint::zero() {
-                println!("length: {}", length);
                 let (packet, used) = parse_next_packet(iter)?;
-                println!("sub-packet: {:?} ({})", packet, used);
                 length -= BigUint::from(used);
                 bits_used += used;
                 packets.push(packet);
@@ -176,7 +173,8 @@ mod tests {
             ("38006F45291200", 1 + 6 + 2),
             ("EE00D40C823060", 7 + 2 + 4 + 1),
             ("8A004A801A8002F478", 16),
-            ("620080001611562C8802118E34", 23),
+            ("620080001611562C8802118E34", 12),
+            ("C0015000016115A2E0802F182340", 23),
             ("A0016C880162017C3686B18A3D4780", 31)
         ] {
             println!("Hex: {} (sum: {})", hex, version_sum);
