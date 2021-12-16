@@ -96,34 +96,38 @@ fn parse_next_packet(iter: &mut Chars) -> io::Result<(Packet, usize)> {
     let version = bits2bigint(iter, VERSION_LENGTH)?;
     let op_type = bits2string(iter, OP_TYPE_LENGTH);
     let (packet, count) = match op_type.chars().next().unwrap() {
-        '0' => {
-            let (sub_packets, count) = parse_operator(iter)?;
-            let op = match op_type.as_str() {
-                "000" => AllOp::Sum,
-                "001" => AllOp::Product,
-                "010" => AllOp::Minimum,
-                "011" => AllOp::Maximum,
-                other => return make_io_error(format!("Unrecognized OpCode: {}", other).as_str())
-            };
-            (Packet::AllOperator(version, op, sub_packets), count)
-        }
-        _ => {
-            if op_type.as_str() == "100" {
-                let (literal, count) = parse_literal(iter)?;
-                (Packet::Literal(version, literal), count)
-            } else {
-                let (sub_packets, count) = parse_operator(iter)?;
-                let op = match op_type.as_str() {
-                    "101" => TwoOp::Greater,
-                    "110" => TwoOp::Less,
-                    "111" => TwoOp::Equal,
-                    other => return make_io_error(format!("Unrecognized OpCode: {}", other).as_str())
-                };
-                (Packet::TwoOperator(version, op, Box::new(sub_packets[0].clone()), Box::new(sub_packets[1].clone())), count)
-            }
-        }
+        '0' => parse_zero_operator(version, op_type.as_str(), iter)?,
+        _ => parse_one_operator(version, op_type.as_str(), iter)?
     };
     Ok((packet, count + VERSION_LENGTH + OP_TYPE_LENGTH))
+}
+
+fn parse_zero_operator(version: BigUint, op_type: &str, iter: &mut Chars) -> io::Result<(Packet, usize)> {
+    let (sub_packets, count) = parse_operator(iter)?;
+    let op = match op_type {
+        "000" => AllOp::Sum,
+        "001" => AllOp::Product,
+        "010" => AllOp::Minimum,
+        "011" => AllOp::Maximum,
+        other => return make_io_error(format!("Unrecognized OpCode: {}", other).as_str())
+    };
+    Ok((Packet::AllOperator(version, op, sub_packets), count))
+}
+
+fn parse_one_operator(version: BigUint, op_type: &str, iter: &mut Chars) -> io::Result<(Packet, usize)> {
+    if op_type == "100" {
+        let (literal, count) = parse_literal(iter)?;
+        Ok((Packet::Literal(version, literal), count))
+    } else {
+        let (sub_packets, count) = parse_operator(iter)?;
+        let op = match op_type {
+            "101" => TwoOp::Greater,
+            "110" => TwoOp::Less,
+            "111" => TwoOp::Equal,
+            other => return make_io_error(format!("Unrecognized OpCode: {}", other).as_str())
+        };
+        Ok((Packet::TwoOperator(version, op, Box::new(sub_packets[0].clone()), Box::new(sub_packets[1].clone())), count))
+    }
 }
 
 fn parse_literal(iter: &mut Chars) -> io::Result<(BigUint, usize)> {
