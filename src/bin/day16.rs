@@ -1,9 +1,9 @@
 use std::io;
 use std::str::{Chars, FromStr};
-use advent_code_lib::{advent_main, make_inner_io_error, make_io_error};
+use advent_code_lib::{advent_main, all_lines, make_inner_io_error, make_io_error};
 use bits::BitArray;
 use itertools::Itertools;
-use num::{BigUint, Zero};
+use num::{BigUint, One, Zero};
 
 const VERSION_LENGTH: usize = 3;
 const OP_TYPE_LENGTH: usize = 3;
@@ -13,47 +13,72 @@ const SUB_PACKETS_COUNT: usize = 11;
 
 fn main() -> io::Result<()> {
     advent_main(&[], &[], |args| {
+        let packet: Packet = all_lines(args[1].as_str())?.next().unwrap().parse()?;
+        println!("Part 1: {}", packet.version_sum());
         Ok(())
     })
 }
 
 #[derive(Copy, Clone, Eq, Debug, PartialEq)]
-enum OpCode {
-    Literal, Zero, One, Two, Three, Five, Six, Seven
+enum AllOp {
+    Sum, Product, Minimum, Maximum
+}
+
+#[derive(Copy, Clone, Eq, Debug, PartialEq)]
+enum TwoOp {
+    Greater, Less, Equal
 }
 
 #[derive(Clone, Eq, Debug, PartialEq)]
 enum Packet {
     Literal(BigUint, BigUint),
-    Operator(BigUint, OpCode, Vec<Packet>)
+    AllOperator(BigUint, AllOp, Vec<Packet>),
+    TwoOperator(BigUint, TwoOp, Box<Packet>, Box<Packet>)
 }
 
 impl Packet {
     fn version_sum(&self) -> BigUint {
         match self {
             Packet::Literal(version, _) => version.clone(),
-            Packet::Operator(version, _, children) => {
+            Packet::AllOperator(version, _, children) => {
                 version + &children.iter().map(|child| child.version_sum()).sum::<BigUint>()
             }
+            Packet::TwoOperator(version, _, one, two) => {
+                version + one.version_sum() + two.version_sum()
+            }
+        }
+    }
+
+    fn calculate(&self) -> BigUint {
+        match self {
+            Packet::Literal(_, value) => value.clone(),
+            Packet::AllOperator(_, opcode, sub_packets) => opcode.calculate(sub_packets),
+            Packet::TwoOperator(_, opcode, sub1, sub2) => opcode.calculate(sub1, sub2)
         }
     }
 }
 
-impl FromStr for OpCode {
-    type Err = io::Error;
+impl AllOp {
+    fn calculate(&self, sub_packets: &Vec<Packet>) -> BigUint {
+        let subs = sub_packets.iter().map(|p| p.calculate());
+        match self {
+            AllOp::Sum => subs.sum(),
+            AllOp::Product => subs.product(),
+            AllOp::Minimum => subs.min().unwrap(),
+            AllOp::Maximum => subs.max().unwrap()
+        }
+    }
+}
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "000" => OpCode::Zero,
-            "001" => OpCode::One,
-            "010" => OpCode::Two,
-            "011" => OpCode::Three,
-            "100" => OpCode::Literal,
-            "101" => OpCode::Five,
-            "110" => OpCode::Six,
-            "111" => OpCode::Seven,
-            other => return make_io_error(format!("Unrecognized OpCode: {}", other).as_str())
-        })
+impl TwoOp {
+    fn calculate(&self, sub1: &Packet, sub2: &Packet) -> BigUint {
+        let calc1 = sub1.calculate();
+        let calc2 = sub2.calculate();
+        if match self {
+            TwoOp::Greater => calc1 > calc2,
+            TwoOp::Less => calc1 < calc2,
+            TwoOp::Equal => calc1 == calc2
+        } {BigUint::one()} else {BigUint::zero()}
     }
 }
 
@@ -68,14 +93,33 @@ impl FromStr for Packet {
 
 fn parse_next_packet(iter: &mut Chars) -> io::Result<(Packet, usize)> {
     let version = bits2bigint(iter, VERSION_LENGTH)?;
-    let (packet, count) = match bits2string(iter, OP_TYPE_LENGTH).parse::<OpCode>()? {
-        OpCode::Literal => {
-            let (literal, count) = parse_literal(iter)?;
-            (Packet::Literal(version, literal), count)
-        }
-        operator => {
+    let op_type = bits2string(iter, OP_TYPE_LENGTH);
+    let (packet, count) = match op_type.chars().next().unwrap() {
+        '0' => {
             let (sub_packets, count) = parse_operator(iter)?;
-            (Packet::Operator(version, operator, sub_packets), count)
+            let op = match op_type.as_str() {
+                "000" => AllOp::Sum,
+                "001" => AllOp::Product,
+                "010" => AllOp::Minimum,
+                "011" => AllOp::Maximum,
+                other => return make_io_error(format!("Unrecognized OpCode: {}", other).as_str())
+            };
+            (Packet::AllOperator(version, op, sub_packets), count)
+        }
+        _ => {
+            if op_type.as_str() == "100" {
+                let (literal, count) = parse_literal(iter)?;
+                (Packet::Literal(version, literal), count)
+            } else {
+                let (sub_packets, count) = parse_operator(iter)?;
+                let op = match op_type.as_str() {
+                    "101" => TwoOp::Greater,
+                    "110" => TwoOp::Less,
+                    "111" => TwoOp::Equal,
+                    other => return make_io_error(format!("Unrecognized OpCode: {}", other).as_str())
+                };
+                (Packet::TwoOperator(version, op, Box::new(sub_packets[0].clone()), Box::new(sub_packets[1].clone())), count)
+            }
         }
     };
     Ok((packet, count + VERSION_LENGTH + OP_TYPE_LENGTH))
@@ -182,5 +226,10 @@ mod tests {
             println!("{:?}", packet);
             assert_eq!(packet.version_sum(), BigUint::from(version_sum as usize));
         }
+    }
+
+    #[test]
+    fn test_part_2() {
+
     }
 }
