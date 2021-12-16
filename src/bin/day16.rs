@@ -103,7 +103,7 @@ fn parse_next_packet(iter: &mut Chars) -> io::Result<(Packet, usize)> {
 }
 
 fn parse_zero_operator(version: BigUint, op_type: &str, iter: &mut Chars) -> io::Result<(Packet, usize)> {
-    let (sub_packets, count) = parse_operator(iter)?;
+    let (sub_packets, count) = parse_sub_packets(iter)?;
     let op = match op_type {
         "000" => AllOp::Sum,
         "001" => AllOp::Product,
@@ -119,7 +119,7 @@ fn parse_one_operator(version: BigUint, op_type: &str, iter: &mut Chars) -> io::
         let (literal, count) = parse_literal(iter)?;
         Ok((Packet::Literal(version, literal), count))
     } else {
-        let (sub_packets, count) = parse_operator(iter)?;
+        let (sub_packets, count) = parse_sub_packets(iter)?;
         let op = match op_type {
             "101" => TwoOp::Greater,
             "110" => TwoOp::Less,
@@ -143,32 +143,38 @@ fn parse_literal(iter: &mut Chars) -> io::Result<(BigUint, usize)> {
     Ok((BigUint::from(&actual_bits.parse::<BitArray>()?), bits_used))
 }
 
-fn parse_operator(iter: &mut Chars) -> io::Result<(Vec<Packet>, usize)> {
+fn parse_sub_packets(iter: &mut Chars) -> io::Result<(Vec<Packet>, usize)> {
     let mut packets = Vec::new();
     let mut bits_used = 1;
     match iter.next().ok_or(make_inner_io_error("No length type"))? {
-        '0' => {
-            let mut length = bits2bigint(iter, SUB_PACKETS_LENGTH)?;
-            bits_used += SUB_PACKETS_LENGTH;
-            while length > BigUint::zero() {
-                let (packet, used) = parse_next_packet(iter)?;
-                length -= BigUint::from(used);
-                bits_used += used;
-                packets.push(packet);
-            }
-        },
-        '1' => {
-            let count = bits2bigint(iter, SUB_PACKETS_COUNT)?;
-            bits_used += SUB_PACKETS_COUNT;
-            for _ in num::range(BigUint::zero(), count) {
-                let (packet, used) = parse_next_packet(iter)?;
-                bits_used += used;
-                packets.push(packet);
-            }
-        },
+        '0' => parse_sub_0(iter, &mut bits_used, &mut packets)?,
+        '1' => parse_sub_1(iter, &mut bits_used, &mut packets)?,
         other => return make_io_error(format!("Unrecognized char: {}", other).as_str())
     }
     Ok((packets, bits_used))
+}
+
+fn parse_sub_0(iter: &mut Chars, bits_used: &mut usize, packets: &mut Vec<Packet>) -> io::Result<()> {
+    let mut length = bits2bigint(iter, SUB_PACKETS_LENGTH)?;
+    *bits_used += SUB_PACKETS_LENGTH;
+    while length > BigUint::zero() {
+        let (packet, used) = parse_next_packet(iter)?;
+        length -= BigUint::from(used);
+        *bits_used += used;
+        packets.push(packet);
+    }
+    Ok(())
+}
+
+fn parse_sub_1(iter: &mut Chars, bits_used: &mut usize, packets: &mut Vec<Packet>) -> io::Result<()> {
+    let count = bits2bigint(iter, SUB_PACKETS_COUNT)?;
+    *bits_used += SUB_PACKETS_COUNT;
+    for _ in num::range(BigUint::zero(), count) {
+        let (packet, used) = parse_next_packet(iter)?;
+        *bits_used += used;
+        packets.push(packet);
+    }
+    Ok(())
 }
 
 fn bits2string(iter: &mut Chars, bits_to_take: usize) -> String {
