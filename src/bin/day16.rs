@@ -15,6 +15,7 @@ fn main() -> io::Result<()> {
     advent_main(&[], &[], |args| {
         let packet: Packet = all_lines(args[1].as_str())?.next().unwrap().parse()?;
         println!("Part 1: {}", packet.version_sum());
+        println!("Part 2: {}", packet.calculate());
         Ok(())
     })
 }
@@ -230,6 +231,21 @@ mod tests {
 
     #[test]
     fn test_part_2() {
+        for (hex, value) in [
+            ("C200B40A82", 3),
+            ("04005AC33890", 54),
+            ("880086C3E88112", 7),
+            ("CE00C43D881120", 9),
+            ("D8005AC2A8F0", 1),
+            ("F600BC2D8F", 0),
+            ("9C005AC2F8F0", 0),
+            ("9C0141080250320F1802104A08", 1),
+        ] {
+            println!("Hex: {} (sum: {})", hex, value);
+            let packet: Packet = hex.parse().unwrap();
+            println!("{:?}", packet);
+            assert_eq!(packet.calculate(), BigUint::from(value as usize));
 
+        }
     }
 }
