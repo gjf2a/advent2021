@@ -40,7 +40,7 @@ impl TargetZone {
     }
 
     fn find_best_launch(&self) -> isize {
-        ((find_dx_from(self.min_x) as isize)..(self.max_x + 1))
+        ((find_dx_from(self.min_x) as isize)..=(self.max_x + 1))
             .map(|dx| self.best_height_using(dx))
             .max().unwrap()
     }
@@ -48,6 +48,8 @@ impl TargetZone {
     fn best_height_using(&self, dx: isize) -> isize {
         let mut highest = 0;
         let max_x = find_max_x_from(dx);
+        let mut last_y = 0;
+        let mut extra_countdown = 100;
         for dy in self.min_y.. {
             let (points, height) = self.simulate(dx, dy);
             if let Some(height) = height {
@@ -55,9 +57,12 @@ impl TargetZone {
                     highest = height;
                 }
             } else {
-                let (end_x, _) = points.last().unwrap();
-                if *end_x == max_x {
-                    break;
+                let (end_x, end_y) = points.last().unwrap();
+                if *end_x == max_x && *end_y < last_y && *end_y < self.min_y {
+                    extra_countdown -= 1;
+                    if extra_countdown == 0 {break;}
+                } else {
+                    last_y = *end_y;
                 }
             }
         }
