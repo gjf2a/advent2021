@@ -53,7 +53,7 @@ impl TargetZone {
         let mut highest = 0;
         let max_x = find_max_x_from(dx);
         let mut last_y = 0;
-        let mut extra_countdown = 100;
+        let mut extra_countdown = 15;
         for dy in self.min_y.. {
             let (points, height) = self.simulate(dx, dy);
             if let Some(height) = height {
@@ -169,47 +169,3 @@ mod tests {
         assert_eq!(best, 45);
     }
 }
-
-// Looks like some kind of constraint satisfaction problem.
-//
-// Given a target zone and an initial position of (0, 0), maximize y while landing
-// in the target zone.
-//
-// Find dx and dy such that:
-// * y is maximized
-// * There exists an (x, y) point within the target zone
-//
-// Break this into pieces:
-// * How do we set dx to ensure landing in the target zone?
-// * How do we set dy to ensure landing in the target zone?
-// * How do we maximize y?
-//
-// Note: My puzzle input has positive x and negative y.
-
-// 1. Setting dx to ensure landing in the target x zone. (min_x, max_x)
-// min_x <= dx + (dx - 1) + (dx - 2) + (dx - 3) + ... + 2 + 1 <= max_x
-// min_x <= dx (dx + 1) / 2 <= max_x
-// dx (dx + 1) / 2 = c
-// dx^2 + dx - 2c = 0
-// dx = -1 +/- sqrt(1 + 8c) / 2
-// We know dx has to be positive, so...
-// dx = (sqrt(1 + 8c) - 1) / 2
-// Solving the inequality gives min and max values for dx
-// From my experiment above:
-// * This does give legit values for dx
-// * But it misses a lot, because the summation is not always complete!
-// * It does give a legitimate minimum dx; below that, it will never reach.
-//
-// 2. Setting dy to ensure landing in the target y zone. (min_y, max_y)
-// * use the dx values derived in (1) to constrain what we do here.
-// * Given a specific dx value:
-//   * This represents a time budget for dy.
-//   * y has to get in the target range within the time implied by dx
-//   * It can't be so big that it overshoots.
-//   * Min value for dy when it hits the target zone is -(min_y - max_y)
-//   * Reaching min value implies maximum buildup, hence maximum height
-//
-// for each possible dx value
-//   Calculate target dy value
-//   Work backwards to find maximum height
-//   Work further backwards to find initial (dx, dy)
