@@ -1,4 +1,5 @@
 use std::cmp::max;
+use std::collections::HashSet;
 use std::io;
 use std::str::FromStr;
 use advent_code_lib::{advent_main, all_lines};
@@ -7,8 +8,9 @@ fn main() -> io::Result<()> {
     advent_main(&[], &[], |args| {
         let line = all_lines(args[1].as_str())?.next().unwrap();
         let zone: TargetZone = line.parse().unwrap();
-        let highest = zone.find_best_launch();
+        let (highest, hits) = zone.find_best_launch();
         println!("Part 1: {}", highest);
+        println!("Part 2: {}", hits.len());
         Ok(())
     })
 }
@@ -39,13 +41,15 @@ impl TargetZone {
         y < self.min_y
     }
 
-    fn find_best_launch(&self) -> isize {
-        ((find_dx_from(self.min_x) as isize)..=(self.max_x + 1))
-            .map(|dx| self.best_height_using(dx))
-            .max().unwrap()
+    fn find_best_launch(&self) -> (isize, HashSet<(isize, isize)>) {
+        let mut hits = HashSet::new();
+        let height = ((find_dx_from(self.min_x) as isize)..=(self.max_x + 1))
+            .map(|dx| self.best_height_using(dx, &mut hits))
+            .max().unwrap();
+        (height, hits)
     }
 
-    fn best_height_using(&self, dx: isize) -> isize {
+    fn best_height_using(&self, dx: isize, hits: &mut HashSet<(isize, isize)>) -> isize {
         let mut highest = 0;
         let max_x = find_max_x_from(dx);
         let mut last_y = 0;
@@ -53,6 +57,7 @@ impl TargetZone {
         for dy in self.min_y.. {
             let (points, height) = self.simulate(dx, dy);
             if let Some(height) = height {
+                hits.insert((dx, dy));
                 if highest < height {
                     highest = height;
                 }
