@@ -51,23 +51,12 @@ impl TargetZone {
 
     fn best_height_using(&self, dx: isize, hits: &mut HashSet<(isize, isize)>) -> isize {
         let mut highest = 0;
-        let max_x = find_max_x_from(dx);
-        let mut last_y = 0;
-        let mut extra_countdown = 15;
-        for dy in self.min_y.. {
-            let (points, height) = self.simulate(dx, dy);
+        for dy in self.min_y..(-2 * self.max_y) {
+            let (_, height) = self.simulate(dx, dy);
             if let Some(height) = height {
                 hits.insert((dx, dy));
                 if highest < height {
                     highest = height;
-                }
-            } else {
-                let (end_x, end_y) = points.last().unwrap();
-                if *end_x == max_x && *end_y < last_y && *end_y < self.min_y {
-                    extra_countdown -= 1;
-                    if extra_countdown == 0 {break;}
-                } else {
-                    last_y = *end_y;
                 }
             }
         }
@@ -165,7 +154,7 @@ mod tests {
     #[test]
     fn test_find() {
         let target: TargetZone = EXAMPLE.parse().unwrap();
-        let best = target.find_best_launch();
+        let (best, _) = target.find_best_launch();
         assert_eq!(best, 45);
     }
 }
