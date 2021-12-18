@@ -4,34 +4,38 @@ use std::ops::Add;
 use std::str::{Chars, FromStr};
 use advent_code_lib::{advent_main, all_lines, assert_io_error, assert_token, make_io_error};
 
-const SHOW: &'static str = "-show";
-
 fn main() -> io::Result<()> {
-    advent_main(&[], &[SHOW], |args| {
-        let total = all_lines(args[1].as_str())?
-            .map(|line| line.parse::<SailfishNumber>().unwrap())
-            .reduce(|a, b| &a + &b)
-            .unwrap();
-        if args.contains(&SHOW.to_string()) {println!("total: {}", total);}
-        println!("Part 1: {}", total.magnitude());
+    advent_main(&[], &[], |args| {
+        println!("Part 1: {}", part1(args[1].as_str())?);
+        println!("Part 2: {}", part2(args[1].as_str())?);
+        Ok(())
+    })
+}
 
-        let mut max = 0;
-        let nums: Vec<SailfishNumber> = all_lines(args[1].as_str())?
-            .map(|line| line.parse::<SailfishNumber>().unwrap())
-            .collect();
-        for n1 in nums.iter() {
-            for n2 in nums.iter() {
-                if n1 != n2 {
-                    let magnitude = (n1 + n2).magnitude();
-                    if magnitude > max {
-                        max = magnitude;
-                    }
+fn part1(filename: &str) -> io::Result<u32> {
+    Ok(all_lines(filename)?
+        .map(|line| line.parse::<SailfishNumber>().unwrap())
+        .reduce(|a, b| &a + &b)
+        .unwrap()
+        .magnitude())
+}
+
+fn part2(filename: &str) -> io::Result<u32> {
+    let mut max = 0;
+    let nums: Vec<SailfishNumber> = all_lines(filename)?
+        .map(|line| line.parse::<SailfishNumber>().unwrap())
+        .collect();
+    for n1 in nums.iter() {
+        for n2 in nums.iter() {
+            if n1 != n2 {
+                let magnitude = (n1 + n2).magnitude();
+                if magnitude > max {
+                    max = magnitude;
                 }
             }
         }
-        println!("Part 2: {}", max);
-        Ok(())
-    })
+    }
+    Ok(max)
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
