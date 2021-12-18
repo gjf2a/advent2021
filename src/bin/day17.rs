@@ -51,7 +51,7 @@ impl TargetZone {
 
     fn best_height_using(&self, dx: isize, hits: &mut HashSet<(isize, isize)>) -> isize {
         let mut highest = 0;
-        for dy in self.min_y..(-2 * self.max_y) {
+        for dy in 1..-self.min_y {
             let (_, height) = self.simulate(dx, dy);
             if let Some(height) = height {
                 hits.insert((dx, dy));
