@@ -43,7 +43,7 @@ impl TargetZone {
 
     fn find_best_launch(&self) -> (isize, HashSet<(isize, isize)>) {
         let mut hits = HashSet::new();
-        let height = ((find_dx_from(self.min_x) as isize)..=(self.max_x + 1))
+        let height = ((find_dx_from(self.min_x) as isize)..=self.max_x)
             .map(|dx| self.best_height_using(dx, &mut hits))
             .max().unwrap();
         (height, hits)
@@ -83,31 +83,8 @@ impl TargetZone {
 }
 
 fn extract_nums_from(input: &str) -> Vec<isize> {
-    let mut nums = Vec::new();
-    let mut current_num = String::new();
-    let mut negative = false;
-    for c in input.chars() {
-        if c.is_digit(10) {
-            current_num.push(c);
-        } else if c == '-' {
-            negative = true;
-        } else {
-            if !current_num.is_empty() {
-                nums.push(add_num(current_num.as_str(), negative));
-                current_num = String::new();
-                negative = false;
-            }
-        }
-    }
-    if !current_num.is_empty() {
-        nums.push(add_num(current_num.as_str(), negative));
-    }
-    nums
-}
-
-fn add_num(num: &str, negative: bool) -> isize {
-    let num: isize = num.parse().unwrap();
-    if negative {-num} else {num}
+    let spaced: String = input.chars().map(|c| if c == '-' || c.is_digit(10) {c} else {' '}).collect();
+    spaced.split_whitespace().map(|s| s.parse().unwrap()).collect()
 }
 
 fn find_dx_from(target_x: isize) -> f64 {
