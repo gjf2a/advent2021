@@ -51,7 +51,7 @@ impl TargetZone {
 
     fn best_height_using(&self, dx: isize, hits: &mut HashSet<(isize, isize)>) -> isize {
         let mut highest = 0;
-        for dy in 1..-self.min_y {
+        for dy in self.min_y..-self.min_y {
             let (_, height) = self.simulate(dx, dy);
             if let Some(height) = height {
                 hits.insert((dx, dy));
@@ -114,10 +114,6 @@ fn find_dx_from(target_x: isize) -> f64 {
     (((1 + 8 * target_x) as f64).sqrt() - 1.0) / 2.0
 }
 
-fn find_max_x_from(dx: isize) -> isize {
-    dx * (dx + 1) / 2
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,13 +130,6 @@ mod tests {
     #[test]
     fn num_from_test() {
         assert_eq!(extract_nums_from(EXAMPLE), vec![20, 30, -10, -5]);
-    }
-
-    #[test]
-    fn test_max_x() {
-        for (dx, mdx) in [(5, 15), (6, 21), (7, 28), (8, 36)] {
-            assert_eq!(find_max_x_from(dx), mdx);
-        }
     }
 
     #[test]
