@@ -4,14 +4,17 @@ use std::ops::Add;
 use std::str::{Chars, FromStr};
 use advent_code_lib::{advent_main, all_lines, assert_io_error, assert_token, make_io_error};
 
+const SHOW: &'static str = "-show";
+
 fn main() -> io::Result<()> {
-    advent_main(&[], &[], |args| {
+    advent_main(&[], &[SHOW], |args| {
         let total = all_lines(args[1].as_str())?
             .map(|line| line.parse::<SailfishNumber>().unwrap())
-            .inspect(|sn| println!("{}", sn))
+            .inspect(|sn| if args.contains(&SHOW.to_string()) {println!("{}", sn);})
             .reduce(|a, b| &a + &b)
-            .unwrap().magnitude();
-        println!("Part 1: {}", total);
+            .unwrap();
+        println!("total: {}", total);
+        println!("Part 1: {}", total.magnitude());
         Ok(())
     })
 }
@@ -59,16 +62,20 @@ impl SailfishNumber {
 
     fn reduced(&self) -> Self {
         let mut result = self.clone();
-        println!("Reducing {}", result);
+        //println!("Reducing {}", result);
         loop {
             let (exploded, explode_needed, _, _) = result.exploded(0);
-            println!("Exploded {}", exploded);
-            let (split, split_needed) = exploded.split();
-            println!("Split {}", split);
-            result = split;
-            if !split_needed && !explode_needed {
-                println!("Done");
-                return result;
+            //println!("Exploded {}", exploded);
+            if explode_needed {
+                result = exploded;
+            } else {
+                let (split, split_needed) = exploded.split();
+                //println!("Split {}", split);
+                result = split;
+                if !split_needed {
+                    //println!("Done");
+                    return result;
+                }
             }
         }
     }
@@ -80,12 +87,27 @@ impl SailfishNumber {
         }
     }
 
+    fn is_num(&self) -> bool {
+        match self {
+            SailfishNumber::Num(_) => true,
+            SailfishNumber::Pair(_, _) => false
+        }
+    }
+
+    fn explodable(&self) -> bool {
+        match self {
+            SailfishNumber::Num(_) => false,
+            SailfishNumber::Pair(a, b) => {
+                a.is_num() && b.is_num()
+            }
+        }
+    }
+
     fn exploded(&self, depth: usize) -> (SailfishNumber, bool, Option<u32>, Option<u32>) {
         match self {
             SailfishNumber::Num(_) => (self.clone(), false, None, None),
             SailfishNumber::Pair(sn1, sn2) => {
-                if depth == 4 {
-                    println!("exploding {}", self);
+                if depth >= 4 && self.explodable() {
                     (SailfishNumber::Num(0), true, Some(sn1.unwrap_num()), Some(sn2.unwrap_num()))
                 } else {
                     let (left, did_explode, left_num, right_num) = sn1.exploded(depth + 1);
@@ -227,5 +249,14 @@ mod tests {
         }
         let result: SailfishNumber = "[[[[5,0],[7,4]],[5,5]],[6,6]]".parse().unwrap();
         assert_eq!(sum, result);
+    }
+
+    #[test]
+    fn add_test_3() {
+        let one: SailfishNumber = "[[[0,[4,5]],[0,0]],[[[4,5],[2,6]],[9,5]]]".parse().unwrap();
+        let two: SailfishNumber = "[7,[[[3,7],[4,3]],[[6,3],[8,8]]]]".parse().unwrap();
+        let sum = &one + &two;
+        let sum_str = format!("{}", sum);
+        assert_eq!(sum_str.as_str(), "[[[[4,0],[5,4]],[[7,7],[6,0]]],[[8,[7,7]],[[7,9],[5,0]]]]");
     }
 }
