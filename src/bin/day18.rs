@@ -10,11 +10,26 @@ fn main() -> io::Result<()> {
     advent_main(&[], &[SHOW], |args| {
         let total = all_lines(args[1].as_str())?
             .map(|line| line.parse::<SailfishNumber>().unwrap())
-            .inspect(|sn| if args.contains(&SHOW.to_string()) {println!("{}", sn);})
             .reduce(|a, b| &a + &b)
             .unwrap();
-        println!("total: {}", total);
+        if args.contains(&SHOW.to_string()) {println!("total: {}", total);}
         println!("Part 1: {}", total.magnitude());
+
+        let mut max = 0;
+        let nums: Vec<SailfishNumber> = all_lines(args[1].as_str())?
+            .map(|line| line.parse::<SailfishNumber>().unwrap())
+            .collect();
+        for n1 in nums.iter() {
+            for n2 in nums.iter() {
+                if n1 != n2 {
+                    let magnitude = (n1 + n2).magnitude();
+                    if magnitude > max {
+                        max = magnitude;
+                    }
+                }
+            }
+        }
+        println!("Part 2: {}", max);
         Ok(())
     })
 }
@@ -62,18 +77,14 @@ impl SailfishNumber {
 
     fn reduced(&self) -> Self {
         let mut result = self.clone();
-        //println!("Reducing {}", result);
         loop {
             let (exploded, explode_needed, _, _) = result.exploded(0);
-            //println!("Exploded {}", exploded);
             if explode_needed {
                 result = exploded;
             } else {
                 let (split, split_needed) = exploded.split();
-                //println!("Split {}", split);
                 result = split;
                 if !split_needed {
-                    //println!("Done");
                     return result;
                 }
             }
