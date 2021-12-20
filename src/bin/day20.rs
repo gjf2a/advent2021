@@ -19,18 +19,18 @@ fn main() -> io::Result<()> {
         lines.next();
         let image = read_image(&mut lines);
         let part = args[2].as_str();
-        let iterations = if part == "1" {PART_1_ITER} else {PART_2_ITER};
-        let mut enhancer = ImageEnhancer::new(image, algorithm);
-        let mut lit = None;
-        for i in 0..=iterations {
-            let image = enhancer.next().unwrap();
-            if args.contains(&SHOW.to_string()) {
-                println!("After step {}", i);
-                println!("{}", image);
-                println!("{:?}", image.num_lit());
-            }
-            lit = image.num_lit();
-        }
+        let iterations = 1 + if part == "1" {PART_1_ITER} else {PART_2_ITER};
+
+        let lit = ImageEnhancer::new(image, algorithm)
+            .take(iterations).enumerate()
+            .inspect(|(i, image)| {
+                if args.contains(&SHOW.to_string()) {
+                    println!("After step {}", i);
+                    println!("{}", image);
+                    println!("{:?}", image.num_lit());
+                }
+            })
+            .last().map(|(_, image)| image.num_lit().unwrap());
         println!("Part {}: {}", part, lit.unwrap());
         Ok(())
     })
@@ -179,9 +179,8 @@ impl Iterator for ImageEnhancer {
 #[cfg(test)]
 mod tests {
     use advent_code_lib::Position;
-    use crate::{read_enhancement_algorithm, read_image};
+    use crate::read_image;
 
-    const TEST_ALGORITHM: &'static str = "..#.#..#####.#.#.#.###.##.....###.##.#..###.####..#####..#....#..#..##..###..######.###...####..#..#####..##..#.#####...##.#.#..#.##..#.#......#.###.######.###.####...#.##.##..#..#..#####.....#.#....###..#.##......#.....#..#..#..##..#...##.######.####.####.#.#...#.......#..#.#.#...####.##.#......#..#...##.#.##..#...##.#.##..###.#......#.#.......#.#.#.####.###.##...#.....####.#..#..#.##.#....##..#.####....##...##..#...#......#.#.......#.......##..####..#...#.#.#...##..#.#..###..#####........#..####......#..#";
     const TEST_IMAGE: &'static str = "#..#.
 #....
 ##..#
@@ -190,7 +189,6 @@ mod tests {
 
     #[test]
     fn test1() {
-        //let algorithm = read_enhancement_algorithm(TEST_ALGORITHM);
         let image = read_image(&mut TEST_IMAGE.split_whitespace().map(|s| s.to_string()));
         assert_eq!(image.neighborhood(Position::from((2, 2))), 34);
     }
