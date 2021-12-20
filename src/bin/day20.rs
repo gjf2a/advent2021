@@ -8,21 +8,30 @@ use bits::BitArray;
 const ON:  char = '#';
 const OFF: char = '.';
 const PART_1_ITER: usize = 2;
+const PART_2_ITER: usize = 50;
 const BORDER: isize = 1;
+const SHOW: &'static str = "-show";
 
 fn main() -> io::Result<()> {
-    advent_main(&[], &[], |args| {
+    advent_main(&["(1|2)"], &[SHOW], |args| {
         let mut lines = all_lines(args[1].as_str())?;
         let algorithm = read_enhancement_algorithm(lines.next().unwrap().as_str());
         lines.next();
         let image = read_image(&mut lines);
+        let part = args[2].as_str();
+        let iterations = if part == "1" {PART_1_ITER} else {PART_2_ITER};
         let mut enhancer = ImageEnhancer::new(image, algorithm);
-        for i in 0..=PART_1_ITER {
+        let mut lit = None;
+        for i in 0..=iterations {
             let image = enhancer.next().unwrap();
-            println!("After step {}", i);
-            println!("{}", image);
-            println!("{:?}", image.num_lit());
+            if args.contains(&SHOW.to_string()) {
+                println!("After step {}", i);
+                println!("{}", image);
+                println!("{:?}", image.num_lit());
+            }
+            lit = image.num_lit();
         }
+        println!("Part {}: {}", part, lit.unwrap());
         Ok(())
     })
 }
