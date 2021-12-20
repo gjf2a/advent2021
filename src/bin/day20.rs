@@ -67,6 +67,10 @@ struct Image {
 impl Image {
     fn new() -> Self {Image {bits: HashMap::new(), infinite_expanse: false, min_row: 0, min_col: 0, max_row: 0, max_col: 0}}
 
+    fn lowest_pos(&self) -> Position {
+        Position::from((self.min_col, self.min_row))
+    }
+
     fn width(&self) -> usize {
         (self.max_col - self.min_col + 1) as usize
     }
@@ -157,6 +161,7 @@ impl Iterator for ImageEnhancer {
                                                          self.image.max_row + BORDER) {
             updated.set(pixel.col, pixel.row, self.algorithm.is_set(self.image.neighborhood(pixel)));
         }
+        updated.infinite_expanse = updated.on(updated.lowest_pos());
         mem::swap(&mut self.image, &mut updated);
         Some(updated)
     }
