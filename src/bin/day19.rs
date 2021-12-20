@@ -6,7 +6,6 @@ use std::ops::{Add, Mul, Neg, Sub};
 use std::str::{FromStr, Split};
 use advent_code_lib::{advent_main, ExNihilo, make_inner_io_error, MultiLineObjects};
 use bare_metal_modulo::{MNum, ModNumC};
-use common_macros::hash_map;
 
 const MIN_OVERLAPPING_POINTS: usize = 12;
 
@@ -60,25 +59,18 @@ impl Display for Scanners {
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct Scanner {
     beacons: Vec<Point3>,
-    transforms2offsets2pairs: HashMap<Transform,HashMap<Point3,Vec<(Point3, Point3)>>>
+    offsets2pairs: HashMap<Point3,Vec<(Transform, Point3, Point3)>>
 }
 
 impl Scanner {
     fn add_beacon(&mut self, beacon: Point3) {
         for other in self.beacons.iter() {
             let offset = beacon - *other;
-            let pair = (*other, beacon);
             for (version, transform) in offset.transforms() {
-                match self.transforms2offsets2pairs.get_mut(&transform) {
-                    None => {
-                        self.transforms2offsets2pairs.insert(transform, hash_map!(version => vec![pair]));
-                    }
-                    Some(offsets2pairs) => {
-                        match offsets2pairs.get_mut(&version) {
-                            None => {offsets2pairs.insert(version, vec![pair]);}
-                            Some(pairs) => { pairs.push(pair);}
-                        }
-                    }
+                let triple = (transform, *other, beacon);
+                match self.offsets2pairs.get_mut(&version) {
+                    None => {self.offsets2pairs.insert(version, vec![triple]);}
+                    Some(triples) => {triples.push(triple);}
                 }
             }
         }
@@ -86,17 +78,14 @@ impl Scanner {
     }
 
     fn overlap_with(&self, other: &Scanner) -> Option<Vec<Point3>> {
-        for (transform, offsets2pairs) in self.transforms2offsets2pairs.iter() {
-            println!("{:?}", transform);
-            let common_offsets = offsets2pairs.keys().filter(|offset| other.transforms2offsets2pairs.get(transform).map_or(false, |m| m.contains_key(*offset))).collect::<Vec<_>>();
-            println!("# common offsets: {}", common_offsets.len());
-        }
+        let common_offsets = self.offsets2pairs.keys().filter(|offset| other.offsets2pairs.contains_key(*offset)).collect::<Vec<_>>();
+        println!("# common offsets: {}", common_offsets.len());
         None
     }
 }
 
 impl ExNihilo for Scanner {
-    fn create() -> Self {Scanner {beacons: Vec::new(), transforms2offsets2pairs: HashMap::new()}}
+    fn create() -> Self {Scanner {beacons: Vec::new(), offsets2pairs: HashMap::new()}}
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
