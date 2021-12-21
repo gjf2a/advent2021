@@ -8,8 +8,6 @@ const DIE_FACES_1: usize = 100;
 const DIE_FACES_2: usize = 3;
 const BOARD_SQUARES: usize = 10;
 const ROLLS_PER_TURN: usize = 3;
-const MIN_TOTAL_2: usize = ROLLS_PER_TURN;
-const MAX_TOTAL_2: usize = ROLLS_PER_TURN * DIE_FACES_2;
 const NUM_PLAYERS: usize = 2;
 const TARGET_SCORE_1: u128 = 1000;
 const TARGET_SCORE_2: u128 = 21;
@@ -189,8 +187,31 @@ impl Add for WinnerTally {
     }
 }
 
+struct DiracRoller {
+    rolls: Vec<u128>
+}
+
+impl DiracRoller {
+    fn new() -> Self {
+        let mut rolls = Vec::new();
+        for roll1 in 1..=DIE_FACES_2 {
+            for roll2 in 1..=DIE_FACES_2 {
+                for roll3 in 1..DIE_FACES_2 {
+                    rolls.push((roll1 + roll2 + roll3) as u128);
+                }
+            }
+        }
+        DiracRoller {rolls}
+    }
+
+    fn rolls(&self) -> Vec<u128> {
+        self.rolls.clone()
+    }
+}
+
 struct AllGamesFrom {
-    wins_from: HashMap<GameKey, WinnerTally>
+    wins_from: HashMap<GameKey, WinnerTally>,
+    roller: DiracRoller
 }
 
 impl AllGamesFrom {
@@ -199,7 +220,7 @@ impl AllGamesFrom {
     }
 
     fn new() -> Self {
-        AllGamesFrom {wins_from: HashMap::new()}
+        AllGamesFrom {wins_from: HashMap::new(), roller: DiracRoller::new()}
     }
 
     fn max_wins(start: [ModNumC<u128, BOARD_SQUARES>; NUM_PLAYERS]) -> u128 {
@@ -215,7 +236,7 @@ impl AllGamesFrom {
                 let tally = match key.winner() {
                     None => {
                         let mut tally = WinnerTally::new();
-                        for total_roll in MIN_TOTAL_2..=MAX_TOTAL_2 {
+                        for total_roll in self.roller.rolls() {
                             tally = tally + self.get_wins_for(key.moved_by(total_roll as u128));
                         }
                         tally
