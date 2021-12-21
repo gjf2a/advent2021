@@ -6,7 +6,8 @@ const DIE_FACES_1: usize = 100;
 const BOARD_SQUARES: usize = 10;
 const ROLLS_PER_TURN: usize = 3;
 const NUM_PLAYERS: usize = 2;
-const TARGET_SCORE_1: u64 = 1000;
+const TARGET_SCORE_1: u128 = 1000;
+const TARGET_SCORE_2: u128 = 21;
 
 fn main() -> io::Result<()> {
     advent_main(&[], &[], |args| {
@@ -26,17 +27,17 @@ struct Game<D> {
     players: [Player; NUM_PLAYERS],
     current_player: ModNumC<usize, NUM_PLAYERS>,
     die: D,
-    num_rolls: u64
+    num_rolls: u128
 }
 
-impl <D:Copy + Iterator<Item=u64>> Game<D> {
+impl <D:Copy + Iterator<Item=u128>> Game<D> {
     fn new<I:Iterator<Item=String>>(mut lines: I, die: D) -> Self {
         let player1 = Player::new(lines.next().unwrap().as_str());
         let player2 = Player::new(lines.next().unwrap().as_str());
         Game {players: [player1, player2], current_player: ModNumC::new(0), die, num_rolls: 0}
     }
 
-    fn roll(&mut self) -> u64 {
+    fn roll(&mut self) -> u128 {
         let mut total = 0;
         for _ in 0..ROLLS_PER_TURN {
             total += self.die.next().unwrap();
@@ -52,7 +53,7 @@ impl <D:Copy + Iterator<Item=u64>> Game<D> {
         loop {
             let distance = self.roll();
             self.mover().play_one_move(distance);
-            self.num_rolls += ROLLS_PER_TURN as u64;
+            self.num_rolls += ROLLS_PER_TURN as u128;
             if self.mover().total_score() >= TARGET_SCORE_1 {
                 break;
             } else {
@@ -61,18 +62,18 @@ impl <D:Copy + Iterator<Item=u64>> Game<D> {
         }
     }
 
-    fn part_1_score(&self) -> u64 {
+    fn part_1_score(&self) -> u128 {
         self.players.iter().map(|p| p.total_score()).min().unwrap() * self.num_rolls
     }
 }
 
 #[derive(Copy, Clone, Debug)]
 struct DeterministicDie {
-    face: ModNumC<u64, DIE_FACES_1>
+    face: ModNumC<u128, DIE_FACES_1>
 }
 
 impl Iterator for DeterministicDie {
-    type Item = u64;
+    type Item = u128;
 
     fn next(&mut self) -> Option<Self::Item> {
         let result = self.face.a() + 1;
@@ -89,25 +90,25 @@ impl DeterministicDie {
 
 #[derive(Copy, Clone, Debug)]
 struct Player {
-    position: ModNumC<u64, BOARD_SQUARES>,
-    position_sum: u64,
-    moves: u64
+    position: ModNumC<u128, BOARD_SQUARES>,
+    position_sum: u128,
+    moves: u128
 }
 
 impl Player {
     fn new(start: &str) -> Self {
-        Player { position_sum: 0, moves: 0, position: ModNumC::new(start.split_whitespace().last().unwrap().parse::<u64>().unwrap() - 1)}
+        Player { position_sum: 0, moves: 0, position: ModNumC::new(start.split_whitespace().last().unwrap().parse::<u128>().unwrap() - 1)}
     }
 
-    fn space_at(&self) -> u64 {
+    fn space_at(&self) -> u128 {
         self.position.a() + 1
     }
 
-    fn total_score(&self) -> u64 {
+    fn total_score(&self) -> u128 {
         self.position_sum + self.moves
     }
 
-    fn play_one_move(&mut self, distance: u64) {
+    fn play_one_move(&mut self, distance: u128) {
         self.position += distance;
         self.moves += 1;
         self.position_sum += self.position.a();
