@@ -53,7 +53,7 @@ impl <D:Copy + Iterator<Item=u64>> Game<D> {
             let distance = self.roll();
             self.mover().play_one_move(distance);
             self.num_rolls += ROLLS_PER_TURN as u64;
-            if self.mover().score >= TARGET_SCORE_1 {
+            if self.mover().total_score() >= TARGET_SCORE_1 {
                 break;
             } else {
                 self.current_player += 1;
@@ -62,7 +62,7 @@ impl <D:Copy + Iterator<Item=u64>> Game<D> {
     }
 
     fn part_1_score(&self) -> u64 {
-        self.players.iter().map(|p| p.score).min().unwrap() * self.num_rolls
+        self.players.iter().map(|p| p.total_score()).min().unwrap() * self.num_rolls
     }
 }
 
@@ -90,21 +90,27 @@ impl DeterministicDie {
 #[derive(Copy, Clone, Debug)]
 struct Player {
     position: ModNumC<u64, BOARD_SQUARES>,
-    score: u64
+    position_sum: u64,
+    moves: u64
 }
 
 impl Player {
     fn new(start: &str) -> Self {
-        Player {score: 0, position: ModNumC::new(start.split_whitespace().last().unwrap().parse::<u64>().unwrap() - 1)}
+        Player { position_sum: 0, moves: 0, position: ModNumC::new(start.split_whitespace().last().unwrap().parse::<u64>().unwrap() - 1)}
     }
 
     fn space_at(&self) -> u64 {
         self.position.a() + 1
     }
 
+    fn total_score(&self) -> u64 {
+        self.position_sum + self.moves
+    }
+
     fn play_one_move(&mut self, distance: u64) {
         self.position += distance;
-        self.score += self.space_at();
+        self.moves += 1;
+        self.position_sum += self.position.a();
     }
 }
 
@@ -116,9 +122,10 @@ mod tests {
     fn test_example_part_1() {
         let mut game = part_1_game("ex/day21.txt").unwrap();
         game.play_until_completion();
-        assert_eq!(game.players[0].score, 1000);
+        println!("{:?}", game);
+        assert_eq!(game.players[0].total_score(), 1000);
         assert_eq!(game.players[0].space_at(), 10);
-        assert_eq!(game.players[1].score, 745);
+        assert_eq!(game.players[1].total_score(), 745);
         assert_eq!(game.players[1].space_at(), 3);
         assert_eq!(game.num_rolls, 993);
         assert_eq!(game.part_1_score(), 739785);
