@@ -18,19 +18,19 @@ fn main() -> io::Result<()> {
     })
 }
 
-fn part_1_game(filename: &str) -> io::Result<Game<DeterministicDie>> {
+fn part_1_game(filename: &str) -> io::Result<Game<DeterministicDie<DIE_FACES_1>, TARGET_SCORE_1>> {
     Ok(Game::new(all_lines(filename)?, DeterministicDie::new()))
 }
 
 #[derive(Debug, Copy, Clone)]
-struct Game<D> {
+struct Game<D, const G: u128> {
     players: [Player; NUM_PLAYERS],
     current_player: ModNumC<usize, NUM_PLAYERS>,
     die: D,
     num_rolls: u128
 }
 
-impl <D:Copy + Iterator<Item=u128>> Game<D> {
+impl <D:Copy + Iterator<Item=u128>, const G: u128> Game<D, G> {
     fn new<I:Iterator<Item=String>>(mut lines: I, die: D) -> Self {
         let player1 = Player::new(lines.next().unwrap().as_str());
         let player2 = Player::new(lines.next().unwrap().as_str());
@@ -54,7 +54,7 @@ impl <D:Copy + Iterator<Item=u128>> Game<D> {
             let distance = self.roll();
             self.mover().play_one_move(distance);
             self.num_rolls += ROLLS_PER_TURN as u128;
-            if self.mover().total_score() >= TARGET_SCORE_1 {
+            if self.mover().total_score() >= G {
                 break;
             } else {
                 self.current_player += 1;
@@ -68,11 +68,11 @@ impl <D:Copy + Iterator<Item=u128>> Game<D> {
 }
 
 #[derive(Copy, Clone, Debug)]
-struct DeterministicDie {
-    face: ModNumC<u128, DIE_FACES_1>
+struct DeterministicDie<const F: usize> {
+    face: ModNumC<u128, F>
 }
 
-impl Iterator for DeterministicDie {
+impl <const F: usize> Iterator for DeterministicDie<F> {
     type Item = u128;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -82,7 +82,7 @@ impl Iterator for DeterministicDie {
     }
 }
 
-impl DeterministicDie {
+impl <const F: usize> DeterministicDie<F> {
     fn new() -> Self {
         DeterministicDie {face: ModNumC::new(0)}
     }
@@ -132,3 +132,17 @@ mod tests {
         assert_eq!(game.part_1_score(), 739785);
     }
 }
+
+// Part 2 ideas
+//
+// This needs to be solved analytically, not be simulation.
+//
+// Given a goal score of 21:
+// Player 1 rolls
+// * Spawns 3 games, with initial moves of 1, 2, and 3.
+// Player 2 rolls
+// * Now 9 games, with initial moves of (1, 1) (1, 2) (1, 3) (2, 1) (2, 2) (2, 3) (3, 1) (3, 2) (3, 3)
+// Player 1 rolls
+// * 27 games
+// Player 2 rolls
+// * 81 games
