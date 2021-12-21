@@ -2,10 +2,11 @@ use std::io;
 use advent_code_lib::{advent_main, all_lines};
 use bare_metal_modulo::{MNum, ModNumC};
 
-const DIE_FACES: usize = 100;
+const DIE_FACES_1: usize = 100;
 const BOARD_SQUARES: usize = 10;
 const ROLLS_PER_TURN: usize = 3;
 const NUM_PLAYERS: usize = 2;
+const TARGET_SCORE_1: u64 = 1000;
 
 fn main() -> io::Result<()> {
     advent_main(&[], &[], |args| {
@@ -20,7 +21,7 @@ fn part_1_game(filename: &str) -> io::Result<Game<DeterministicDie>> {
     Ok(Game::new(all_lines(filename)?, DeterministicDie::new()))
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 struct Game<D> {
     players: [Player; NUM_PLAYERS],
     current_player: ModNumC<usize, NUM_PLAYERS>,
@@ -52,7 +53,7 @@ impl <D:Copy + Iterator<Item=u64>> Game<D> {
             let distance = self.roll();
             self.mover().play_one_move(distance);
             self.num_rolls += ROLLS_PER_TURN as u64;
-            if self.mover().score >= 1000 {
+            if self.mover().score >= TARGET_SCORE_1 {
                 break;
             } else {
                 self.current_player += 1;
@@ -67,7 +68,7 @@ impl <D:Copy + Iterator<Item=u64>> Game<D> {
 
 #[derive(Copy, Clone, Debug)]
 struct DeterministicDie {
-    face: ModNumC<u64, DIE_FACES>
+    face: ModNumC<u64, DIE_FACES_1>
 }
 
 impl Iterator for DeterministicDie {
@@ -86,7 +87,7 @@ impl DeterministicDie {
     }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 struct Player {
     position: ModNumC<u64, BOARD_SQUARES>,
     score: u64
