@@ -30,8 +30,8 @@ fn main() -> io::Result<()> {
                     println!("{:?}", image.num_lit());
                 }
             })
-            .last().map(|(_, image)| image.num_lit().unwrap());
-        println!("Part {}: {}", part, lit.unwrap());
+            .last().and_then(|(_, image)| image.num_lit());
+        println!("Part {}: {:?}", part, lit);
         Ok(())
     })
 }

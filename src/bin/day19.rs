@@ -59,33 +59,53 @@ impl Display for Scanners {
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct Scanner {
     beacons: Vec<Point3>,
-    offsets2pairs: HashMap<Point3,Vec<(Transform, Point3, Point3)>>
+    offsets2triples: HashMap<Point3,Vec<(Transform, Point3, Point3)>>,
+    beacons2beacons: HashMap<Point3,HashMap<Point3,Vec<(Transform, Point3)>>>
 }
 
 impl Scanner {
     fn add_beacon(&mut self, beacon: Point3) {
+        self.beacons2beacons.insert(beacon, HashMap::new());
         for other in self.beacons.iter() {
-            let offset = beacon - *other;
-            for (version, transform) in offset.transforms() {
-                let triple = (transform, *other, beacon);
-                match self.offsets2pairs.get_mut(&version) {
-                    None => {self.offsets2pairs.insert(version, vec![triple]);}
-                    Some(triples) => {triples.push(triple);}
-                }
-            }
+            self.add_offset_between(*other, beacon);
+            self.add_offset_between(beacon, *other);
         }
         self.beacons.push(beacon);
     }
 
+    fn add_offset_between(&mut self, beacon1: Point3, beacon2: Point3) {
+        let mut combos = Vec::new();
+        let offset = beacon2 - beacon1;
+        for (version, transform) in offset.transforms() {
+            let triple = (transform, beacon1, beacon2);
+            combos.push((transform, version));
+            match self.offsets2triples.get_mut(&version) {
+                None => {self.offsets2triples.insert(version, vec![triple]);}
+                Some(triples) => {triples.push(triple);}
+            }
+        }
+        self.beacons2beacons.get(&beacon1).unwrap().insert(beacon2, combos);
+    }
+
     fn overlap_with(&self, other: &Scanner) -> Option<Vec<Point3>> {
-        let common_offsets = self.offsets2pairs.keys().filter(|offset| other.offsets2pairs.contains_key(*offset)).collect::<Vec<_>>();
+        let common_offsets = self.offsets2triples.keys()
+            .filter(|offset| other.offsets2triples.contains_key(*offset))
+            .copied()
+            .collect::<Vec<_>>();
         println!("# common offsets: {}", common_offsets.len());
+        for offset in common_offsets.iter() {
+            for (transform, beacon1, beacon2) in self.offsets2triples.get(offset).unwrap() {
+                for (other_transform, other1, other2) in other.offsets2triples.get(offset).unwrap() {
+                    
+                }
+            }
+        }
         None
     }
 }
 
 impl ExNihilo for Scanner {
-    fn create() -> Self {Scanner {beacons: Vec::new(), offsets2pairs: HashMap::new()}}
+    fn create() -> Self {Scanner {beacons: Vec::new(), offsets2triples: HashMap::new(), beacons2beacons: HashMap::new()}}
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
