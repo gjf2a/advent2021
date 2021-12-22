@@ -66,9 +66,10 @@ struct Scanner {
 impl Scanner {
     fn add_beacon(&mut self, beacon: Point3) {
         self.beacons2beacons.insert(beacon, HashMap::new());
-        for other in self.beacons.iter() {
-            self.add_offset_between(*other, beacon);
-            self.add_offset_between(beacon, *other);
+        let mut beacons = self.beacons.iter().copied().collect::<Vec<_>>();
+        for other in beacons {
+            self.add_offset_between(other, beacon);
+            self.add_offset_between(beacon, other);
         }
         self.beacons.push(beacon);
     }
@@ -84,7 +85,7 @@ impl Scanner {
                 Some(triples) => {triples.push(triple);}
             }
         }
-        self.beacons2beacons.get(&beacon1).unwrap().insert(beacon2, combos);
+        self.beacons2beacons.get_mut(&beacon1).unwrap().insert(beacon2, combos);
     }
 
     fn overlap_with(&self, other: &Scanner) -> Option<Vec<Point3>> {
@@ -96,7 +97,7 @@ impl Scanner {
         for offset in common_offsets.iter() {
             for (transform, beacon1, beacon2) in self.offsets2triples.get(offset).unwrap() {
                 for (other_transform, other1, other2) in other.offsets2triples.get(offset).unwrap() {
-                    
+
                 }
             }
         }
