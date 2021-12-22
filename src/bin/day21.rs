@@ -17,11 +17,14 @@ fn main() -> io::Result<()> {
         let mut game = part_1_game(args[1].as_str())?;
         game.play_until_completion();
         println!("Part 1: {}", game.part_1_score());
-
         println!("Part 2: {}", AllGamesFrom::part_2(args[1].as_str())?);
         Ok(())
     })
 }
+
+/////////////////
+// Part 1 Code //
+/////////////////
 
 fn part_1_game(filename: &str) -> io::Result<Game<DeterministicDie<DIE_FACES_1>, TARGET_SCORE_1>> {
     Game::from_file(filename)
@@ -134,6 +137,52 @@ impl Player {
     }
 }
 
+/////////////////
+// Part 2 Code //
+/////////////////
+
+struct AllGamesFrom {
+    wins_from: HashMap<GameKey, WinnerTally>,
+    roller: DiracRoller
+}
+
+impl AllGamesFrom {
+    fn part_2(filename: &str) -> io::Result<u128> {
+        Ok(Self::max_wins(grab_nums(filename)?))
+    }
+
+    fn new() -> Self {
+        AllGamesFrom {wins_from: HashMap::new(), roller: DiracRoller::new()}
+    }
+
+    fn max_wins(start: [ModNumC<u128, BOARD_SQUARES>; NUM_PLAYERS]) -> u128 {
+        let mut games = AllGamesFrom::new();
+        let wins = games.get_wins_for(GameKey {locations: start, scores: [0, 0], current: ModNumC::new(0)});
+        println!("Distinct games: {}", games.wins_from.len());
+        wins.winner_count()
+    }
+
+    fn get_wins_for(&mut self, key: GameKey) -> WinnerTally {
+        match self.wins_from.get(&key) {
+            Some(wins) => *wins,
+            None => {
+                let tally = match key.winner() {
+                    None => {
+                        let mut tally = WinnerTally::new();
+                        for total_roll in self.roller.rolls() {
+                            tally = tally + self.get_wins_for(key.moved_by(total_roll as u128));
+                        }
+                        tally
+                    }
+                    Some(winner) => winner
+                };
+                self.wins_from.insert(key, tally);
+                tally
+            }
+        }
+    }
+}
+
 #[derive(Copy, Clone, Hash, Eq, PartialEq)]
 struct GameKey {
     locations: [ModNumC<u128, BOARD_SQUARES>; NUM_PLAYERS],
@@ -210,47 +259,6 @@ impl DiracRoller {
     }
 }
 
-struct AllGamesFrom {
-    wins_from: HashMap<GameKey, WinnerTally>,
-    roller: DiracRoller
-}
-
-impl AllGamesFrom {
-    fn part_2(filename: &str) -> io::Result<u128> {
-        Ok(Self::max_wins(grab_nums(filename)?))
-    }
-
-    fn new() -> Self {
-        AllGamesFrom {wins_from: HashMap::new(), roller: DiracRoller::new()}
-    }
-
-    fn max_wins(start: [ModNumC<u128, BOARD_SQUARES>; NUM_PLAYERS]) -> u128 {
-        let mut games = AllGamesFrom::new();
-        let wins = games.get_wins_for(GameKey {locations: start, scores: [0, 0], current: ModNumC::new(0)});
-        println!("Distinct games: {}", games.wins_from.len());
-        wins.winner_count()
-    }
-
-    fn get_wins_for(&mut self, key: GameKey) -> WinnerTally {
-        match self.wins_from.get(&key) {
-            Some(wins) => *wins,
-            None => {
-                let tally = match key.winner() {
-                    None => {
-                        let mut tally = WinnerTally::new();
-                        for total_roll in self.roller.rolls() {
-                            tally = tally + self.get_wins_for(key.moved_by(total_roll as u128));
-                        }
-                        tally
-                    }
-                    Some(winner) => winner
-                };
-                self.wins_from.insert(key, tally);
-                tally
-            }
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -275,16 +283,3 @@ mod tests {
         assert_eq!(result, 444356092776315);
     }
 }
-
-// Part 2 idea
-//
-// Forward-compute every possible game
-// Call wins_from(start1, start2, 0, 0, one)
-//
-// wins_from(sq1, sq2, score1, score2, player)
-// = wins_from(sq1 + 1, sq2, score1 + destination, score2, other player)
-//   + wins_from(sq1 + 2, sq2, score1 + destination, score2, other player)
-//   + wins_from(sq1 + 3, sq2, score1 + destination, score2, other player)
-// (or the other player if it is their turn)
-//
-// Base case: Either score is 21: (1, 0) or (0, 1) depending on winner.
