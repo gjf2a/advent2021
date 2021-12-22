@@ -157,7 +157,7 @@ impl AllGamesFrom {
 
     fn max_wins(start: [ModNumC<u128, BOARD_SQUARES>; NUM_PLAYERS]) -> u128 {
         let mut games = AllGamesFrom::new();
-        let wins = games.get_wins_for(GameKey {locations: start, scores: [0, 0], current: ModNumC::new(0)});
+        let wins = games.get_wins_for(GameKey {locations: start, scores: [0; NUM_PLAYERS], current: ModNumC::new(0)});
         println!("Distinct games: {}", games.wins_from.len());
         wins.winner_count()
     }
@@ -217,7 +217,7 @@ struct WinnerTally {
 
 impl WinnerTally {
     fn new() -> Self {
-        WinnerTally {tally:[0, 0]}
+        WinnerTally {tally:[0; NUM_PLAYERS]}
     }
 
     fn winner_count(&self) -> u128 {
