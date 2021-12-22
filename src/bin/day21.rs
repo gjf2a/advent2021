@@ -147,7 +147,7 @@ impl GameKey {
             .find(|(_, s)| **s >= TARGET_SCORE_2)
             .map(|(p, _)| {
                 let mut result = WinnerTally::new();
-                result.tally[p] += 1;
+                result.tally[p] = 1;
                 result
             })
     }
@@ -196,11 +196,12 @@ impl DiracRoller {
         let mut rolls = Vec::new();
         for roll1 in 1..=DIE_FACES_2 {
             for roll2 in 1..=DIE_FACES_2 {
-                for roll3 in 1..DIE_FACES_2 {
+                for roll3 in 1..=DIE_FACES_2 {
                     rolls.push((roll1 + roll2 + roll3) as u128);
                 }
             }
         }
+        assert_eq!(rolls.len(), DIE_FACES_2.pow(ROLLS_PER_TURN as u32));
         DiracRoller {rolls}
     }
 
