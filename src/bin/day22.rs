@@ -2,7 +2,8 @@ use std::cmp::{max, min};
 use std::fmt::{Display, Formatter};
 use std::io;
 use std::str::FromStr;
-use advent_code_lib::{advent_main, all_lines, make_io_error};
+use advent_code_lib::{advent_main, all_lines, make_inner_io_error, make_io_error};
+use itertools::Itertools;
 
 const PART_1_MAX: isize = 50;
 const ON: &'static str = "on";
@@ -41,19 +42,32 @@ struct RangeDim {
     start: isize, end: isize
 }
 
-impl RangeDim {
-    fn contains(&self, value: isize) -> bool {self.start <= value && value <= self.end}
-
-    fn envelops(&self, other: &RangeDim) -> bool {
-        self.contains(other.start) && self.contains(other.end)
+impl AllActions {
+    fn from_file(filename: &str) -> io::Result<Self> {
+        Ok(AllActions {actions: all_lines(filename)?.map(|line| line.parse::<CuboidAction>().unwrap()).collect()})
     }
 
-    fn intersection(&self, other: &RangeDim) -> Option<RangeDim> {
-        if other.end < self.start || self.end < other.start {
-            None
-        } else {
-            Some(RangeDim {start: max(self.start, other.start), end: min(self.end, other.end)})
+    fn part1(&self) -> Self {
+        let checker_range = RangeDim::from(-PART_1_MAX, PART_1_MAX).unwrap();
+        let checker_cube = Cuboid {ranges: [checker_range; DIMENSIONS]};
+        AllActions {actions: self.actions.iter()
+            .filter(|cuboid| checker_cube.envelops(&cuboid.region))
+            .copied().collect()}
+    }
+
+    fn total_on(&self) -> usize {
+        let mut total = 0;
+        for (i, action) in self.actions.iter().enumerate() {
+            assert_eq!(action.action, CubeState::On);
+            let mut tentative = action.region.num_cubes();
+            for j in 0..i {
+                if let Some(intersection) = action.region.intersection(&self.actions[j].region) {
+                    tentative -= intersection.num_cubes();
+                }
+            }
+            total += tentative;
         }
+        total
     }
 }
 
@@ -63,28 +77,48 @@ impl Cuboid {
         Self {ranges: skeleton.map(|_| iter.next().unwrap())}
     }
 
+    fn num_cubes(&self) -> usize {
+        self.ranges.iter().map(|range| range.span()).product()
+    }
+
     fn envelops(&self, other: &Cuboid) -> bool {
         self.ranges.iter().zip(other.ranges.iter()).all(|(a, b)| a.envelops(b))
     }
 
-    fn intersection<I: Iterator<Item=RangeDim> + FromIterator<RangeDim>>(&self, other: &Cuboid) -> Option<Self> {
-        self.ranges.iter().zip(other.ranges.iter()).map(|(a, b)| a.intersection(b))
-            .collect::<Option<I>>()
-            .map(|iter| Self::from_iter(iter))
+    fn intersection(&self, other: &Cuboid) -> Option<Self> {
+        let ranges = self.ranges.iter()
+            .zip(other.ranges.iter())
+            .filter_map(|(a, b)| a.intersection(b))
+            .collect_vec();
+        if ranges.len() == DIMENSIONS {
+            Some(Self::from_iter(ranges.iter().copied()))
+        } else {
+            None
+        }
     }
 }
 
-impl AllActions {
-    fn from_file(filename: &str) -> io::Result<Self> {
-        Ok(AllActions {actions: all_lines(filename)?.map(|line| line.parse::<CuboidAction>().unwrap()).collect()})
+impl RangeDim {
+    fn from(start: isize, end: isize) -> Option<Self> {
+        if start <= end {
+            Some(RangeDim {start, end})
+        } else {
+            None
+        }
     }
 
-    fn part1(&self) -> Self {
-        let checker_range = RangeDim {start: -PART_1_MAX, end: PART_1_MAX};
-        let checker_cube = Cuboid {ranges: [checker_range; DIMENSIONS]};
-        AllActions {actions: self.actions.iter()
-            .filter(|cuboid| checker_cube.envelops(&cuboid.region))
-            .copied().collect()}
+    fn span(&self) -> usize {
+        (self.end - self.start + 1) as usize
+    }
+
+    fn contains(&self, value: isize) -> bool {self.start <= value && value <= self.end}
+
+    fn envelops(&self, other: &RangeDim) -> bool {
+        self.contains(other.start) && self.contains(other.end)
+    }
+
+    fn intersection(&self, other: &RangeDim) -> Option<RangeDim> {
+        RangeDim::from(max(self.start, other.start), min(self.end, other.end))
     }
 }
 
@@ -114,7 +148,8 @@ impl FromStr for RangeDim {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<isize> = s.split("..").map(|p| p.parse().unwrap()).collect();
-        Ok(RangeDim {start: parts[0], end: parts[1]})
+        Self::from(parts[0], parts[1])
+            .ok_or(make_inner_io_error(format!("RangeDim ({} {}) didn't work", parts[0], parts[1]).as_str()))
     }
 }
 
@@ -160,5 +195,24 @@ impl Display for AllActions {
             writeln!(f, "{}", action)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simple_count() {
+        for cuboid in ["x=10..12,y=10..12,z=10..12", "x=11..13,y=11..13,z=11..13"] {
+            let cuboid: Cuboid = cuboid.parse().unwrap();
+            assert_eq!(cuboid.num_cubes(), 27);
+        }
+    }
+
+    #[test]
+    fn easy_count() {
+        let actions = AllActions::from_file("ex/day22c.txt").unwrap();
+        assert_eq!(actions.total_on(), 46);
     }
 }
