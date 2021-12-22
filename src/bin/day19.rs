@@ -60,7 +60,7 @@ impl Display for Scanners {
 struct Scanner {
     beacons: Vec<Point3>,
     offsets2triples: HashMap<Point3,Vec<(Transform, Point3, Point3)>>,
-    beacons2beacons: HashMap<Point3,HashMap<Point3,Vec<(Transform, Point3)>>>
+    beacons2beacons: HashMap<Point3,HashMap<Point3,HashMap<Transform, Point3>>>
 }
 
 impl Scanner {
@@ -75,11 +75,11 @@ impl Scanner {
     }
 
     fn add_offset_between(&mut self, beacon1: Point3, beacon2: Point3) {
-        let mut combos = Vec::new();
+        let mut combos = HashMap::new();
         let offset = beacon2 - beacon1;
         for (version, transform) in offset.transforms() {
             let triple = (transform, beacon1, beacon2);
-            combos.push((transform, version));
+            combos.insert(transform, version);
             match self.offsets2triples.get_mut(&version) {
                 None => {self.offsets2triples.insert(version, vec![triple]);}
                 Some(triples) => {triples.push(triple);}
@@ -94,6 +94,7 @@ impl Scanner {
             .copied()
             .collect::<Vec<_>>();
         println!("# common offsets: {}", common_offsets.len());
+
         for offset in common_offsets.iter() {
             for (transform, beacon1, beacon2) in self.offsets2triples.get(offset).unwrap() {
                 for (other_transform, other1, other2) in other.offsets2triples.get(offset).unwrap() {
@@ -102,6 +103,24 @@ impl Scanner {
             }
         }
         None
+    }
+
+    fn overlapping_points(&self, beacon1: Point3, beacon2: Point3, transform: Transform, other: &Scanner, other1: Point3, other2: Point3, other_transform: Transform) -> Option<Vec<Point3>> {
+        let mut result = vec![beacon1, beacon2];
+        let mut current_start = beacon2;
+        let mut current_other = other2;
+        for _ in result.len()..MIN_OVERLAPPING_POINTS {
+            for (candidate, possibilities) in self.beacons2beacons.get(&current_start).unwrap().iter() {
+                let candidate_offset = possibilities.get(&transform).unwrap();
+                if let Some(next_other) = other.offsets2triples.get(candidate_offset)
+                    .and_then(|possibilities| possibilities.iter()
+                        .find(|(otransform, obeacon1, obeacon2)| otransform == other_transform && obeacon1 == current_other))
+                    .map(|(_,_,next_other)| *next_other) {
+
+                }
+            }
+        }
+        Some(result)
     }
 }
 
@@ -322,3 +341,14 @@ mod tests {
         }
     }
 }
+
+// Finding the offsets
+//
+// Perform a depth-first search as follows:
+//
+// Set up a stack of points from self, initialized by an arbitrary point
+// If the stack contains 12 points, end the search
+// Successors:
+// * For every offset that is present in other:
+//   * For every point from the offset:
+//
