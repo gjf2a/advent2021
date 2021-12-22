@@ -155,7 +155,7 @@ impl GameKey {
     fn moved_by(&self, roll: u128) -> GameKey {
         let mut next = self.clone();
         next.locations[self.current.a()] += roll;
-        next.scores[self.current.a()] += (next.locations[self.current.a()] + 1).a();
+        next.scores[self.current.a()] += next.locations[self.current.a()].a() + 1;
         next.current += 1;
         next
     }
@@ -225,8 +225,9 @@ impl AllGamesFrom {
 
     fn max_wins(start: [ModNumC<u128, BOARD_SQUARES>; NUM_PLAYERS]) -> u128 {
         let mut games = AllGamesFrom::new();
-        games.get_wins_for(GameKey {locations: start, scores: [0, 0], current: ModNumC::new(0)})
-            .winner_count()
+        let wins = games.get_wins_for(GameKey {locations: start, scores: [0, 0], current: ModNumC::new(0)});
+        println!("Distinct games: {}", games.wins_from.len());
+        wins.winner_count()
     }
 
     fn get_wins_for(&mut self, key: GameKey) -> WinnerTally {
