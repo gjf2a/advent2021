@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io;
 use std::ops::Add;
-use advent_code_lib::{advent_main, all_lines, ExNihilo};
+use advent_code_lib::{advent_main, all_lines, combinations_of, ExNihilo};
 use bare_metal_modulo::{MNum, ModNumC};
 
 const DIE_FACES_1: usize = 100;
@@ -243,13 +243,9 @@ struct DiracRoller {
 impl DiracRoller {
     fn new() -> Self {
         let mut rolls = Vec::new();
-        for roll1 in 1..=DIE_FACES_2 {
-            for roll2 in 1..=DIE_FACES_2 {
-                for roll3 in 1..=DIE_FACES_2 {
-                    rolls.push((roll1 + roll2 + roll3) as u128);
-                }
-            }
-        }
+        combinations_of(DIE_FACES_2, &mut |arr: &[usize; 3]| {
+            rolls.push((arr.len() + arr.iter().copied().sum::<usize>()) as u128);
+        });
         assert_eq!(rolls.len(), DIE_FACES_2.pow(ROLLS_PER_TURN as u32));
         DiracRoller {rolls}
     }

@@ -14,7 +14,7 @@ fn main() -> io::Result<()> {
     advent_main(&[], &[], |args| {
         let actions = AllActions::from_file(args[1].as_str())?;
         let part1 = actions.part1();
-        println!("{}", part1);
+        println!("Part 1: {}", part1.total_on());
         Ok(())
     })
 }
@@ -149,7 +149,7 @@ impl FromStr for RangeDim {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<isize> = s.split("..").map(|p| p.parse().unwrap()).collect();
         Self::from(parts[0], parts[1])
-            .ok_or(make_inner_io_error(format!("RangeDim ({} {}) didn't work", parts[0], parts[1]).as_str()))
+            .ok_or(make_inner_io_error(format!("RangeDim ({} {}) didn't parse", parts[0], parts[1]).as_str()))
     }
 }
 
