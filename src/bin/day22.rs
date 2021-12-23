@@ -57,16 +57,10 @@ impl AllActions {
     }
 
     fn total_on(&self) -> usize {
-        //println!("total_on");
         let mut activated = Vec::new();
         for action in self.actions.iter() {
             activated = action.apply_to(&activated);
-            /*println!("activated");
-            for cube in activated.iter() {
-                println!("{}: {}", cube.num_cubes(), cube);
-            }*/
         }
-        //println!("done");
         activated.iter().map(|cuboid| cuboid.num_cubes()).sum()
     }
 }
@@ -78,11 +72,9 @@ impl CuboidAction {
             match self.region.intersection(cuboid) {
                 None => {result.push(cuboid.clone())}
                 Some(intersection) => {
-                    if let Some(broken_pieces) = cuboid.break_out(&intersection) {
-                        for piece in broken_pieces {
-                            if piece != intersection {
-                                result.push(piece);
-                            }
+                    for piece in cuboid.break_out(&intersection) {
+                        if piece != intersection {
+                            result.push(piece);
                         }
                     }
                 }
@@ -109,19 +101,14 @@ impl Cuboid {
         self.ranges.iter().zip(other.ranges.iter()).all(|(a, b)| a.envelops(b))
     }
 
-    fn break_out(&self, piece: &Cuboid) -> Option<Vec<Cuboid>> {
-        //println!("Breaking out piece: {} from self: {}", piece, self);
+    fn break_out(&self, piece: &Cuboid) -> Vec<Cuboid> {
         let break_outs = self.ranges.iter()
             .zip(piece.ranges.iter())
             .filter_map(|(a, b)| a.break_out(b))
             .collect_vec();
-        //println!("break_outs:");
-        /*for break_out in break_outs.iter() {
-            println!("break_out: {:?}", break_out);
-        }*/
         let num_break_outs = break_outs.iter().map(|v| v.len()).collect_vec();
+        let mut result = Vec::new();
         if break_outs.len() == DIMENSIONS {
-            let mut result = Vec::new();
             combinations_of(num_break_outs.iter().copied().max().unwrap(),
                             &mut |indices: &[usize; DIMENSIONS]| {
                                 if indices.iter().zip(num_break_outs.iter()).all(|(i, len)| *i < *len) {
@@ -132,10 +119,8 @@ impl Cuboid {
                                     result.push(Cuboid {ranges});
                                 }
                             });
-            Some(result)
-        } else  {
-            None
         }
+        result
     }
 
     fn intersection(&self, other: &Cuboid) -> Option<Self> {
@@ -172,7 +157,6 @@ impl RangeDim {
 
     fn break_out(&self, piece: &RangeDim) -> Option<Vec<RangeDim>> {
         self.intersection(piece)
-            //.filter(|intersection| *intersection != *self)
             .map(|intersection| {
                 let mut result = vec![intersection];
                 if intersection.start > self.start {
