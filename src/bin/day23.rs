@@ -4,6 +4,7 @@ use std::io;
 use std::str::FromStr;
 use advent_code_lib::{advent_main, all_lines, make_io_error, Position};
 use bare_metal_modulo::{MNum, ModNumC};
+use itertools::Itertools;
 
 const ENERGY_BASE: u128 = 10;
 const MIN_AMPHIPOD: char = 'A';
@@ -12,6 +13,10 @@ const NUM_AMPHIPOD_TYPES: usize = MAX_AMPHIPOD as usize - MIN_AMPHIPOD as usize 
 const EMPTY_SQUARE: char = '.';
 const WALL_SQUARE: char = '#';
 const IGNORE_SQUARES: [char; 2] = [WALL_SQUARE, ' '];
+const MIN_ROOM_ROW: isize = 2;
+const MAX_ROOM_ROW: isize = MIN_ROOM_ROW + 1;
+const ROOM_ROWS: [isize; 2] = [MIN_ROOM_ROW, MAX_ROOM_ROW];
+const ROOM_COLUMNS: [isize; 4] = [3, 5, 7, 9];
 
 fn main() -> io::Result<()> {
     advent_main(&[], &[], |args| {
@@ -19,16 +24,27 @@ fn main() -> io::Result<()> {
     })
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+fn part1(map: &AmphipodMap) -> u128 {
+
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 struct Amphipod {
-    abcd: ModNumC<u32, NUM_AMPHIPOD_TYPES>
+    abcd: ModNumC<u32, NUM_AMPHIPOD_TYPES>,
+    state: AmphipodState
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 struct AmphipodMap {
     space2amphipod: HashMap<Position, Option<Amphipod>>,
     width: isize,
-    height: isize
+    height: isize,
+    energy_used: u128
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+enum AmphipodState {
+    Starting, Exiting, Waiting, Moving, Finished
 }
 
 impl Amphipod {
@@ -36,7 +52,7 @@ impl Amphipod {
         if code < MIN_AMPHIPOD || code > MAX_AMPHIPOD {
             make_io_error(format!("Illegal Amphipod: {}", code).as_str())
         } else {
-            Ok(Amphipod {abcd: ModNumC::new(code as u32 - MIN_AMPHIPOD as u32)})
+            Ok(Amphipod {abcd: ModNumC::new(code as u32 - MIN_AMPHIPOD as u32), state: AmphipodState::Starting})
         }
     }
 
@@ -63,7 +79,139 @@ impl AmphipodMap {
         }
         let width = space2amphipod.keys().map(|k| k.col).max().unwrap() + 1;
         let height = space2amphipod.keys().map(|k| k.row).max().unwrap() + 1;
-        Ok(AmphipodMap {space2amphipod, width, height})
+        let mut result = AmphipodMap {space2amphipod, width, height, energy_used: 0};
+        result.update_unmoving();
+        Ok(result)
+    }
+
+    fn all_home(&self) -> bool {
+        self.amphipods().all(|(p,_)|self.at_home(p))
+    }
+
+    fn distance_to_goal(&self) -> u128 {
+        self.amphipods().map(|(p, a) | {
+            if self.at_home(p) {
+                0
+            } else {
+                let col_distance = (ROOM_COLUMNS[a.abcd.a()] - p.col).abs() as u128;
+                let row_distance = (MIN_ROOM_ROW - p.row).abs() as u128;
+                let total_distance = col_distance + row_distance + 1;
+                total_distance * a.step_energy()
+            }
+        }).sum()
+    }
+
+    fn amphipod_room_number(&self, p: Position) -> Option<ModNumC<u32, NUM_AMPHIPOD_TYPES>> {
+        if p.row >= MIN_ROOM_ROW {
+            Some(ModNumC::new(((p.col - 3) / 2) as u32))
+        } else {
+            None
+        }
+    }
+
+    fn at_room_entrance(&self, p: Position) -> bool {
+        p.row < MIN_ROOM_ROW && ROOM_COLUMNS.contains(&p.col)
+    }
+
+    fn at_home(&self, p: Position) -> bool {
+        self.amphipod_room_number(p)
+            .map_or(false, |r| self.room_ready(r) &&
+                self.space2amphipod.get(&p).unwrap()
+                    .map_or(false, |a| r == a.abcd))
+    }
+
+    fn room_ready(&self, room: ModNumC<u32, NUM_AMPHIPOD_TYPES>) -> bool {
+        ROOM_ROWS.iter().all(|row| {
+            let p = Position::from((room.a() as isize, *row));
+            self.space2amphipod.get(&p).unwrap().map_or(true, |a| a.abcd == room)
+        })
+    }
+
+    fn update_unmoving(&mut self) {
+        for (cell, contents) in self.space2amphipod.iter_mut() {
+            if let Some(room) = self.amphipod_room_number(*cell) {
+                if let Some(amphipod) = contents {
+                    if self.at_home(*cell) {
+                        amphipod.state = AmphipodState::Finished;
+                    } else if self.amphipod_room_number(*cell).map_or(false, |n| n != amphipod.abcd) {
+                        amphipod.state = AmphipodState::Starting;
+                    } else {
+                        amphipod.state = AmphipodState::Waiting;
+                    }
+                }
+            }
+        }
+    }
+
+    fn amphipods(&self) -> impl Iterator<Item=(Position, Amphipod)> {
+        self.space2amphipod.iter()
+            .filter(|(p, a)| a.is_some())
+            .map(|(p, a)| (*p, a.unwrap()))
+    }
+
+    fn successors(&self) -> Vec<AmphipodMap> {
+        let mut successors = Vec::new();
+        if let Some(mover) = self.single_mover_only() {
+            self.add_neighbors_of(mover, &mut successors);
+        } else {
+            for (p, _) in self.amphipods() {
+                self.add_neighbors_of(p, &mut successors);
+            }
+        }
+        successors
+    }
+
+    fn single_mover_only(&self) -> Option<Position> {
+        self.amphipods().find(|(p, a)| {
+            a.state == AmphipodState::Moving && self.room_entrance(*p)
+            || a.state == AmphipodState::Exiting && (self.room_entrance(*p) || !self.at_home(*p))})
+            .map(|(p, _)| p)
+    }
+
+    fn permitted_for(&self, amphipod: Amphipod, end: Position) -> bool {
+        match amphipod.state {
+            AmphipodState::Starting => end.row <= MIN_ROOM_ROW,
+            AmphipodState::Moving | AmphipodState::Waiting | AmphipodState::Exiting =>
+                self.amphipod_room_number(end).map_or(true, |n| self.room_ready(n) && n == amphipod.abcd),
+            AmphipodState::Finished => end.row == MAX_ROOM_ROW
+        }
+    }
+
+    fn add_neighbors_of(&self, p: Position, successors: &mut Vec<Self>) {
+        let amphipod = self.space2amphipod.get(&p).unwrap().unwrap();
+        for next in p.manhattan_neighbors()
+            .filter(|n| self.permitted_for(amphipod, next) && self.space2amphipod.get(n)
+                .map_or(false, |c| c.is_none())) {
+            let mut next_map = self.clone();
+            let prev_state = amphipod.state;
+            next_map.swap(p, next);
+            next_map.update_unmoving();
+            next_map.energy_used += amphipod.step_energy();
+            next_map.space2amphipod.get_mut(&next).unwrap().unwrap().state = match prev_state {
+                AmphipodState::Starting | AmphipodState::Moving  => AmphipodState::Moving,
+                AmphipodState::Exiting  | AmphipodState::Waiting => AmphipodState::Exiting,
+                AmphipodState::Finished => AmphipodState::Finished
+            };
+            successors.push(next_map);
+        }
+    }
+
+    fn swap(&mut self, p1: Position, p2: Position) {
+        let a1 = self.space2amphipod.get(&p1).unwrap().clone();
+        self.space2amphipod.insert(p1, self.space2amphipod.get(&p2).unwrap().clone());
+        self.space2amphipod.insert(p2, a1);
+    }
+}
+
+impl AmphipodState {
+    fn next(&self) -> Self {
+        match self {
+            AmphipodState::Starting => AmphipodState::Moving,
+            AmphipodState::Moving => AmphipodState::Waiting,
+            AmphipodState::Waiting => AmphipodState::Exiting,
+            AmphipodState::Exiting => AmphipodState::Finished,
+            AmphipodState::Finished => AmphipodState::Finished
+        }
     }
 }
 
