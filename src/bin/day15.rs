@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::io;
-use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch, SearchResult};
-use std::collections::{HashMap, BinaryHeap, BTreeMap};
+use advent_code_lib::{advent_main, nums2map, Position, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch, SearchResult, AStarNode, AStarQueue, best_first_search};
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use bare_metal_modulo::{MNum, ModNumC};
 
@@ -79,16 +79,12 @@ impl RiskMap {
         self.risks.get(&p).map(|r| r.risk())
     }
 
-    fn path_cost(&self, use_a_star: bool) -> (u128, SearchResult<BinaryHeap<PriorityNode>>) {
+    fn path_cost(&self, use_a_star: bool) -> (u128, SearchResult<AStarQueue<u128,Position,PriorityNode>>) {
         let goal = Position::from(((self.width - 1) as isize, (self.height - 1) as isize));
         let a_star_goal = if use_a_star {Some(goal)} else {None};
         let start_node = PriorityNode::new(Position::new(), 0, a_star_goal);
-        let mut open_list: BinaryHeap<PriorityNode> = BinaryHeap::new();
-        open_list.enqueue(&start_node);
-        let mut visited = VisitTracker::new();
-        visited.record_visit(&start_node);
         let mut cost_at_goal = None;
-        let search_result = search(open_list, |node, queue| {
+        let search_result = best_first_search(&start_node, |node, queue| {
             if node.p == goal {
                 cost_at_goal = Some(node.cost_so_far);
                 ContinueSearch::No
@@ -96,10 +92,7 @@ impl RiskMap {
                 for neighbor in node.p.manhattan_neighbors() {
                     if let Some(risk) = self.risk(neighbor) {
                         let neighbor_node = PriorityNode::new(neighbor, node.cost_so_far + risk, a_star_goal);
-                        if visited.should_visit(&neighbor_node) {
-                            visited.record_visit(&neighbor_node);
-                            queue.enqueue(&neighbor_node);
-                        }
+                        queue.enqueue(&neighbor_node);
                     }
                 }
                 ContinueSearch::Yes
@@ -115,7 +108,7 @@ impl RiskMap {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 struct PriorityNode {
     p: Position,
     cost_so_far: u128,
@@ -126,16 +119,17 @@ impl PriorityNode {
     pub fn new(p: Position, cost_so_far: u128, goal: Option<Position>) -> Self {
         PriorityNode {p, cost_so_far, goal}
     }
-
-    pub fn total_estimated(&self) -> u128 {
-        self.cost_so_far + self.goal.map_or(0, |g| g.manhattan_distance(self.p) as u128)
-    }
 }
 
-impl PartialOrd for PriorityNode {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.total_estimated().partial_cmp(&other.total_estimated()).map(|ord| ord.reverse())
+impl AStarNode for PriorityNode {
+    type Cost = u128;
+    type Item = Position;
+
+    fn total_estimated(&self) -> u128 {
+        self.cost_so_far + self.goal.map_or(0, |g| g.manhattan_distance(self.p) as u128)
     }
+
+    fn get(&self) -> &Self::Item {&self.p}
 }
 
 impl Display for RiskMap {
@@ -145,26 +139,5 @@ impl Display for RiskMap {
             write!(f, "{}", self.risks.get(&p).unwrap().risk())?
         }
         Ok(())
-    }
-}
-
-struct VisitTracker {
-    visited: BTreeMap<Position, u128>
-}
-
-impl VisitTracker {
-    fn new() -> Self {
-        VisitTracker {visited: BTreeMap::new()}
-    }
-
-    fn should_visit(&self, node: &PriorityNode) -> bool {
-        match self.visited.get(&node.p) {
-            None => true,
-            Some(prev_count) => node.cost_so_far < *prev_count
-        }
-    }
-
-    fn record_visit(&mut self, node: &PriorityNode) {
-        self.visited.insert(node.p, node.cost_so_far);
     }
 }
