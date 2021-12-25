@@ -5,6 +5,10 @@ use std::io;
 use advent_code_lib::{advent_main, all_lines, make_io_error, Position, RowMajorPositionIterator};
 use itertools::Itertools;
 
+const EAST: char = '>';
+const SOUTH: char = 'v';
+const EMPTY: char = '.';
+
 fn main() -> io::Result<()> {
     advent_main(&[], &[], |args| {
         println!("Part 1: {}", part1(args[1].as_str())?);
@@ -48,9 +52,9 @@ impl Cucumbers {
                 let col = col as isize;
                 width = max(width, col);
                 grid.insert(Position::from((col, row)), match c {
-                    '>' => Cucumber::East,
-                    'v' => Cucumber::South,
-                    '.' => Cucumber::Empty,
+                    EAST => Cucumber::East,
+                    SOUTH => Cucumber::South,
+                    EMPTY => Cucumber::Empty,
                     _ => make_io_error("Not a cucumber")?
                 });
             }
@@ -115,7 +119,7 @@ impl Display for Cucumbers {
 
 impl Display for Cucumber {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {Cucumber::East => '>', Cucumber::South => 'v', Cucumber::Empty => '.'})
+        write!(f, "{}", match self {Cucumber::East => EAST, Cucumber::South => SOUTH, Cucumber::Empty => EMPTY})
     }
 }
 
