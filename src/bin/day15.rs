@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::io;
 use advent_code_lib::{advent_main, nums2map, Position, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch, SearchResult, AStarNode, AStarQueue, best_first_search};
 use std::collections::HashMap;
