@@ -3,7 +3,6 @@ use advent_code_lib::{advent_main, nums2map, Position, map_width_height, RowMajo
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{Display, Formatter};
 use bare_metal_modulo::{MNum, ModNumC};
-use ansi_term::Style;
 
 const EXPANSION_FACTOR: usize = 5;
 const SHOW_GRID: &'static str = "-grid";
@@ -142,7 +141,7 @@ impl Display for PathMap {
             if p.col == 0 && p.row > 0 {writeln!(f)?;}
             let risk = self.map.risks.get(&p).unwrap().risk();
             if self.path.contains(&p) {
-                write!(f, "{}", Style::new().bold().paint(format!("{}", risk)))?;
+                write!(f, "{}", ansi_term::Colour::Red.bold().paint(format!("{}", risk)))?;
             } else {
                 write!(f, "{}", risk)?
             }
