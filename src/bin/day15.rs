@@ -1,5 +1,5 @@
 use std::io;
-use advent_code_lib::{advent_main, nums2map, Position, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch, SearchResult, AStarNode, AStarQueue, best_first_search};
+use advent_code_lib::{advent_main, nums2map, Position, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch, SearchResult, AStarQueue, best_first_search, SearchQueue, AStarCost, AStarNode};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use bare_metal_modulo::{MNum, ModNumC};
@@ -78,19 +78,20 @@ impl RiskMap {
         self.risks.get(&p).map(|r| r.risk())
     }
 
-    fn path_cost(&self, use_a_star: bool) -> (u128, SearchResult<AStarQueue<u128,Position,PriorityNode>>) {
+    fn path_cost(&self, use_a_star: bool) -> (u128, SearchResult<AStarQueue<u128,Position>>) {
         let goal = Position::from(((self.width - 1) as isize, (self.height - 1) as isize));
         let a_star_goal = if use_a_star {Some(goal)} else {None};
-        let start_node = PriorityNode::new(Position::new(), 0, a_star_goal);
+        let p = Position::new();
+        let start_node = AStarNode::new(p, AStarCost::new(0, a_star_goal.map_or(0, |g| g.manhattan_distance(p) as u128)));
         let mut cost_at_goal = None;
         let search_result = best_first_search(&start_node, |node, queue| {
-            if node.p == goal {
-                cost_at_goal = Some(node.cost_so_far);
+            if *node.item() == goal {
+                cost_at_goal = Some(node.cost_so_far());
                 ContinueSearch::No
             } else {
-                for neighbor in node.p.manhattan_neighbors() {
+                for neighbor in node.item().manhattan_neighbors() {
                     if let Some(risk) = self.risk(neighbor) {
-                        let neighbor_node = PriorityNode::new(neighbor, node.cost_so_far + risk, a_star_goal);
+                        let neighbor_node = AStarNode::new(neighbor, AStarCost::new(node.cost_so_far() + risk, a_star_goal.map_or(0, |g| g.manhattan_distance(p) as u128)));
                         queue.enqueue(&neighbor_node);
                     }
                 }
@@ -105,30 +106,6 @@ impl RiskMap {
             Position::from((p.col + offset.col * self.width as isize,
                             p.row + offset.row * self.height as isize)))
     }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
-struct PriorityNode {
-    p: Position,
-    cost_so_far: u128,
-    goal: Option<Position>
-}
-
-impl PriorityNode {
-    pub fn new(p: Position, cost_so_far: u128, goal: Option<Position>) -> Self {
-        PriorityNode {p, cost_so_far, goal}
-    }
-}
-
-impl AStarNode for PriorityNode {
-    type Cost = u128;
-    type Item = Position;
-
-    fn total_estimated(&self) -> u128 {
-        self.cost_so_far + self.goal.map_or(0, |g| g.manhattan_distance(self.p) as u128)
-    }
-
-    fn get(&self) -> &Self::Item {&self.p}
 }
 
 impl Display for RiskMap {
