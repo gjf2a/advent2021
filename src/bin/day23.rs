@@ -84,9 +84,7 @@ impl AmphipodMap {
         Ok(result)
     }
 
-    fn all_home(&self) -> bool {
-        self.amphipods().all(|(p,_)|self.at_home(p))
-    }
+    fn all_home(&self) -> bool {self.amphipods().all(|(p,_)|self.at_home(p))}
 
     fn distance_to_goal(&self) -> u128 {
         self.amphipods().map(|(p, a) | {

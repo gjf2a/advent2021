@@ -1,24 +1,30 @@
 use std::io;
 use advent_code_lib::{advent_main, nums2map, Position, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch, SearchResult, AStarQueue, best_first_search, SearchQueue, AStarCost, AStarNode};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{Display, Formatter};
 use bare_metal_modulo::{MNum, ModNumC};
+use ansi_term::Style;
 
 const EXPANSION_FACTOR: usize = 5;
 const SHOW_GRID: &'static str = "-grid";
+const SHOW_PATH: &'static str = "-path";
 const A_STAR: &'static str = "-a*";
 const STATS: &'static str = "-stats";
 
 fn main() -> io::Result<()> {
-    advent_main(&["(1|2)"], &[SHOW_GRID, A_STAR, STATS], |args| {
+    advent_main(&["(1|2)"], &[SHOW_GRID, SHOW_PATH, A_STAR, STATS], |args| {
         let part = args[2].as_str();
         let mut map = RiskMap::new(args[1].as_str())?;
         if part == "2" {
             map = map.expand(EXPANSION_FACTOR);
         }
-        if args.contains(&SHOW_GRID.to_string()) { println!("{}", map); }
+        if args.contains(&SHOW_GRID.to_string()) {println!("{}", map);}
         let use_a_star = args.contains(&A_STAR.to_string());
-        let (cost, result) = map.path_cost(use_a_star);
+        let result = map.path_cost(use_a_star);
+        let cost = result.cost().unwrap();
+        if args.contains(&SHOW_PATH.to_string()) {
+            println!("{}", PathMap::new(&map, result.path().unwrap()));
+        }
         println!("Part {} score: {}", part, cost);
         if args.contains(&STATS.to_string()) {
             println!("Enqueued: {} Dequeued: {}", result.enqueued(), result.dequeued());
@@ -78,15 +84,12 @@ impl RiskMap {
         self.risks.get(&p).map(|r| r.risk())
     }
 
-    fn path_cost(&self, use_a_star: bool) -> (u128, SearchResult<AStarQueue<u128,Position>>) {
+    fn path_cost(&self, use_a_star: bool) -> SearchResult<AStarQueue<u128,Position>> {
         let goal = Position::from(((self.width - 1) as isize, (self.height - 1) as isize));
         let a_star_goal = if use_a_star {Some(goal)} else {None};
-        let p = Position::new();
-        let start_node = a_star_node_from(p, 0, a_star_goal);
-        let mut cost_at_goal = None;
-        let search_result = best_first_search(&start_node, |node, queue| {
+        let start_node = a_star_node_from(Position::new(), 0, a_star_goal);
+        best_first_search(&start_node, |node, queue| {
             if *node.item() == goal {
-                cost_at_goal = Some(node.cost_so_far());
                 ContinueSearch::No
             } else {
                 for neighbor in node.item().manhattan_neighbors() {
@@ -97,8 +100,7 @@ impl RiskMap {
                 }
                 ContinueSearch::Yes
             }
-        });
-        (cost_at_goal.unwrap(), search_result)
+        })
     }
 
     fn points_at<'a>(&'a self, offset: &'a Position) -> impl Iterator<Item=Position> + 'a {
@@ -117,6 +119,33 @@ impl Display for RiskMap {
         for p in RowMajorPositionIterator::new(self.width, self.height) {
             if p.col == 0 && p.row > 0 {writeln!(f)?;}
             write!(f, "{}", self.risks.get(&p).unwrap().risk())?
+        }
+        Ok(())
+    }
+}
+
+struct PathMap {
+    map: RiskMap,
+    path: HashSet<Position>
+}
+
+impl PathMap {
+    fn new(map: &RiskMap, path: VecDeque<Position>) -> Self {
+        //let enabled = ansi_term::enable_ansi_support(); // Maybe need this on Windows?
+        PathMap {map: map.clone(), path: path.iter().copied().collect()}
+    }
+}
+
+impl Display for PathMap {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for p in RowMajorPositionIterator::new(self.map.width, self.map.height) {
+            if p.col == 0 && p.row > 0 {writeln!(f)?;}
+            let risk = self.map.risks.get(&p).unwrap().risk();
+            if self.path.contains(&p) {
+                write!(f, "{}", Style::new().bold().paint(format!("{}", risk)))?;
+            } else {
+                write!(f, "{}", risk)?
+            }
         }
         Ok(())
     }
