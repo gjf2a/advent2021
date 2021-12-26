@@ -82,7 +82,7 @@ impl RiskMap {
         let goal = Position::from(((self.width - 1) as isize, (self.height - 1) as isize));
         let a_star_goal = if use_a_star {Some(goal)} else {None};
         let p = Position::new();
-        let start_node = AStarNode::new(p, AStarCost::new(0, a_star_goal.map_or(0, |g| g.manhattan_distance(p) as u128)));
+        let start_node = a_star_node_from(p, 0, a_star_goal);
         let mut cost_at_goal = None;
         let search_result = best_first_search(&start_node, |node, queue| {
             if *node.item() == goal {
@@ -91,7 +91,7 @@ impl RiskMap {
             } else {
                 for neighbor in node.item().manhattan_neighbors() {
                     if let Some(risk) = self.risk(neighbor) {
-                        let neighbor_node = AStarNode::new(neighbor, AStarCost::new(node.cost_so_far() + risk, a_star_goal.map_or(0, |g| g.manhattan_distance(*node.item()) as u128)));
+                        let neighbor_node = a_star_node_from(neighbor, node.cost_so_far() + risk, a_star_goal);
                         queue.enqueue(&neighbor_node);
                     }
                 }
@@ -106,6 +106,10 @@ impl RiskMap {
             Position::from((p.col + offset.col * self.width as isize,
                             p.row + offset.row * self.height as isize)))
     }
+}
+
+fn a_star_node_from(p: Position, cost_so_far: u128, g: Option<Position>) -> AStarNode<u128, Position> {
+    AStarNode::new(p, AStarCost::new(cost_so_far, g.map_or(0, |g| g.manhattan_distance(p) as u128)))
 }
 
 impl Display for RiskMap {
