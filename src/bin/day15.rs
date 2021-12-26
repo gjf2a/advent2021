@@ -91,7 +91,7 @@ impl RiskMap {
             } else {
                 for neighbor in node.item().manhattan_neighbors() {
                     if let Some(risk) = self.risk(neighbor) {
-                        let neighbor_node = AStarNode::new(neighbor, AStarCost::new(node.cost_so_far() + risk, a_star_goal.map_or(0, |g| g.manhattan_distance(p) as u128)));
+                        let neighbor_node = AStarNode::new(neighbor, AStarCost::new(node.cost_so_far() + risk, a_star_goal.map_or(0, |g| g.manhattan_distance(*node.item()) as u128)));
                         queue.enqueue(&neighbor_node);
                     }
                 }
