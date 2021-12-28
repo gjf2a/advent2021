@@ -23,13 +23,13 @@ fn main() -> io::Result<()> {
 }
 
 fn part1(map: &AmphipodMap) -> u128 {
-    let mut max_iterations = 20;
+    //let mut max_iterations = 20;
     let start_node = AStarNode::new(map.clone(), AStarCost::new(0, map.distance_to_goal()));
     best_first_search(&start_node, |node, queue| {
         println!("node cost: {} (estimated total: {}) home: {}", node.cost_so_far(), node.total_estimate(), node.item().num_home());
         println!("{}", node.item());
-        max_iterations -= 1;
-        if max_iterations == 0 {return ContinueSearch::No;}
+        //max_iterations -= 1;
+        //if max_iterations == 0 {return ContinueSearch::No;}
         if node.item().all_home() {
             ContinueSearch::No
         } else {
