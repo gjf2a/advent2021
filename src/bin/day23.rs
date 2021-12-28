@@ -10,6 +10,7 @@ const ENERGY_BASE: u128 = 10;
 const MIN_AMPHIPOD: char = 'A';
 const MAX_AMPHIPOD: char = 'D';
 const NUM_AMPHIPOD_TYPES: usize = MAX_AMPHIPOD as usize - MIN_AMPHIPOD as usize + 1;
+const NUM_AMPHIPODS: usize = NUM_AMPHIPOD_TYPES * 2;
 const HALLWAY_SPOTS: usize = 11;
 const DEPTH: usize = 3;
 const ROOM_COLUMNS: [usize; NUM_AMPHIPOD_TYPES] = [2, 4, 6, 8];
@@ -22,8 +23,13 @@ fn main() -> io::Result<()> {
 }
 
 fn part1(map: &AmphipodMap) -> u128 {
+    let mut max_iterations = 20;
     let start_node = AStarNode::new(map.clone(), AStarCost::new(0, map.distance_to_goal()));
     best_first_search(&start_node, |node, queue| {
+        println!("node cost: {} (estimated total: {}) home: {}", node.cost_so_far(), node.total_estimate(), node.item().num_home());
+        println!("{}", node.item());
+        max_iterations -= 1;
+        if max_iterations == 0 {return ContinueSearch::No;}
         if node.item().all_home() {
             ContinueSearch::No
         } else {
@@ -127,8 +133,24 @@ impl AmphipodMap {
         AmphipodMap {amphipods, energy_used: 0}
     }
 
+    fn check_invariants(&self) {
+        assert_eq!(self.amphipods.len(), NUM_AMPHIPODS);
+
+        for i in 0..self.amphipods.len() {
+            for j in (i+1)..self.amphipods.len() {
+                assert!(self.amphipods[i].row != self.amphipods[j].row || self.amphipods[i].column != self.amphipods[j].column);
+            }
+        }
+
+        assert!(self.amphipods.iter().all(|a| a.row == 0 || (a.row <= 2 && ROOM_COLUMNS.contains(&a.column.a()))));
+    }
+
     fn all_home(&self) -> bool {
         self.amphipods.iter().all(|amp| amp.at_home())
+    }
+
+    fn num_home(&self) -> usize {
+        self.amphipods.iter().filter(|a| a.at_home()).count()
     }
 
     fn room_ready(&self, room: ModNumC<usize,NUM_AMPHIPOD_TYPES>) -> bool {
@@ -188,6 +210,7 @@ impl AmphipodMap {
                         }
                     }
                 }
+                copy.check_invariants();
                 copy
             })
             .collect()
