@@ -171,6 +171,7 @@ impl AmphipodMap {
             .map(|d| {
                 let mut copy = self.clone();
                 copy.amphipods[i].go(d);
+                copy.energy_used += copy.amphipods[i].step_energy();
                 for (j, a) in copy.amphipods.iter_mut().enumerate() {
                     a.state = if i == j {
                         match a.state {
