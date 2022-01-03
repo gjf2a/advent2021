@@ -1,25 +1,29 @@
-use std::cmp::Ordering;
 use std::io;
-use advent_code_lib::{advent_main, nums2map, Position, search, SearchQueue, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch, SearchResult};
-use std::collections::{HashMap, BinaryHeap, BTreeMap};
+use advent_code_lib::{advent_main, nums2map, Position, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch, SearchResult, AStarQueue, best_first_search, SearchQueue, AStarCost, AStarNode};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{Display, Formatter};
 use bare_metal_modulo::{MNum, ModNumC};
 
 const EXPANSION_FACTOR: usize = 5;
 const SHOW_GRID: &'static str = "-grid";
+const SHOW_PATH: &'static str = "-path";
 const A_STAR: &'static str = "-a*";
 const STATS: &'static str = "-stats";
 
 fn main() -> io::Result<()> {
-    advent_main(&["(1|2)"], &[SHOW_GRID, A_STAR, STATS], |args| {
+    advent_main(&["(1|2)"], &[SHOW_GRID, SHOW_PATH, A_STAR, STATS], |args| {
         let part = args[2].as_str();
         let mut map = RiskMap::new(args[1].as_str())?;
         if part == "2" {
             map = map.expand(EXPANSION_FACTOR);
         }
-        if args.contains(&SHOW_GRID.to_string()) { println!("{}", map); }
+        if args.contains(&SHOW_GRID.to_string()) {println!("{}", map);}
         let use_a_star = args.contains(&A_STAR.to_string());
-        let (cost, result) = map.path_cost(use_a_star);
+        let result = map.path_cost(use_a_star);
+        let cost = result.cost().unwrap();
+        if args.contains(&SHOW_PATH.to_string()) {
+            println!("{}", PathMap::new(&map, result.path().unwrap()));
+        }
         println!("Part {} score: {}", part, cost);
         if args.contains(&STATS.to_string()) {
             println!("Enqueued: {} Dequeued: {}", result.enqueued(), result.dequeued());
@@ -79,33 +83,23 @@ impl RiskMap {
         self.risks.get(&p).map(|r| r.risk())
     }
 
-    fn path_cost(&self, use_a_star: bool) -> (u128, SearchResult<BinaryHeap<PriorityNode>>) {
+    fn path_cost(&self, use_a_star: bool) -> SearchResult<AStarQueue<u128,Position>> {
         let goal = Position::from(((self.width - 1) as isize, (self.height - 1) as isize));
         let a_star_goal = if use_a_star {Some(goal)} else {None};
-        let start_node = PriorityNode::new(Position::new(), 0, a_star_goal);
-        let mut open_list: BinaryHeap<PriorityNode> = BinaryHeap::new();
-        open_list.enqueue(&start_node);
-        let mut visited = VisitTracker::new();
-        visited.record_visit(&start_node);
-        let mut cost_at_goal = None;
-        let search_result = search(open_list, |node, queue| {
-            if node.p == goal {
-                cost_at_goal = Some(node.cost_so_far);
+        let start_node = a_star_node_from(Position::new(), 0, a_star_goal);
+        best_first_search(&start_node, |node, queue| {
+            if *node.item() == goal {
                 ContinueSearch::No
             } else {
-                for neighbor in node.p.manhattan_neighbors() {
+                for neighbor in node.item().manhattan_neighbors() {
                     if let Some(risk) = self.risk(neighbor) {
-                        let neighbor_node = PriorityNode::new(neighbor, node.cost_so_far + risk, a_star_goal);
-                        if visited.should_visit(&neighbor_node) {
-                            visited.record_visit(&neighbor_node);
-                            queue.enqueue(&neighbor_node);
-                        }
+                        let neighbor_node = a_star_node_from(neighbor, node.cost_so_far() + risk, a_star_goal);
+                        queue.enqueue(&neighbor_node);
                     }
                 }
                 ContinueSearch::Yes
             }
-        });
-        (cost_at_goal.unwrap(), search_result)
+        })
     }
 
     fn points_at<'a>(&'a self, offset: &'a Position) -> impl Iterator<Item=Position> + 'a {
@@ -115,27 +109,8 @@ impl RiskMap {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, Debug)]
-struct PriorityNode {
-    p: Position,
-    cost_so_far: u128,
-    goal: Option<Position>
-}
-
-impl PriorityNode {
-    pub fn new(p: Position, cost_so_far: u128, goal: Option<Position>) -> Self {
-        PriorityNode {p, cost_so_far, goal}
-    }
-
-    pub fn total_estimated(&self) -> u128 {
-        self.cost_so_far + self.goal.map_or(0, |g| g.manhattan_distance(self.p) as u128)
-    }
-}
-
-impl PartialOrd for PriorityNode {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.total_estimated().partial_cmp(&other.total_estimated()).map(|ord| ord.reverse())
-    }
+fn a_star_node_from(p: Position, cost_so_far: u128, g: Option<Position>) -> AStarNode<u128, Position> {
+    AStarNode::new(p, AStarCost::new(cost_so_far, g.map_or(0, |g| g.manhattan_distance(p) as u128)))
 }
 
 impl Display for RiskMap {
@@ -148,23 +123,29 @@ impl Display for RiskMap {
     }
 }
 
-struct VisitTracker {
-    visited: BTreeMap<Position, u128>
+struct PathMap {
+    map: RiskMap,
+    path: HashSet<Position>
 }
 
-impl VisitTracker {
-    fn new() -> Self {
-        VisitTracker {visited: BTreeMap::new()}
+impl PathMap {
+    fn new(map: &RiskMap, path: VecDeque<Position>) -> Self {
+        //let enabled = ansi_term::enable_ansi_support(); // Maybe need this on Windows?
+        PathMap {map: map.clone(), path: path.iter().copied().collect()}
     }
+}
 
-    fn should_visit(&self, node: &PriorityNode) -> bool {
-        match self.visited.get(&node.p) {
-            None => true,
-            Some(prev_count) => node.cost_so_far < *prev_count
+impl Display for PathMap {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for p in RowMajorPositionIterator::new(self.map.width, self.map.height) {
+            if p.col == 0 && p.row > 0 {writeln!(f)?;}
+            let risk = self.map.risks.get(&p).unwrap().risk();
+            if self.path.contains(&p) {
+                write!(f, "{}", ansi_term::Colour::Red.bold().paint(format!("{}", risk)))?;
+            } else {
+                write!(f, "{}", risk)?
+            }
         }
-    }
-
-    fn record_visit(&mut self, node: &PriorityNode) {
-        self.visited.insert(node.p, node.cost_so_far);
+        Ok(())
     }
 }

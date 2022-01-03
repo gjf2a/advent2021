@@ -1,5 +1,5 @@
 use std::io;
-use advent_code_lib::{AdjacencySets, all_lines, Arena, advent_main, ParentMapQueue, search, SearchQueue};
+use advent_code_lib::{AdjacencySets, all_lines, Arena, advent_main, ParentMapQueue, search, SearchQueue, ContinueSearch};
 use hash_histogram::HashHistogram;
 
 // NOTE:
@@ -59,6 +59,7 @@ fn all_paths(graph: &AdjacencySets, rule: Rule) -> Vec<Vec<String>> {
                 }
             }
         }
+        ContinueSearch::Yes
     });
     all_paths
 }
