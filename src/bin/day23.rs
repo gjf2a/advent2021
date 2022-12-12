@@ -4,7 +4,7 @@ use std::io;
 use advent_code_lib::{advent_main, all_lines, AStarCost, AStarNode, best_first_search, ContinueSearch, DirType, make_io_error, ManhattanDir, SearchQueue};
 use bare_metal_modulo::{MNum, ModNumC};
 use itertools::Itertools;
-use enum_iterator::IntoEnumIterator;
+use enum_iterator::all;
 
 const ENERGY_BASE: u128 = 10;
 const MIN_AMPHIPOD: char = 'A';
@@ -188,7 +188,7 @@ impl AmphipodMap {
     }
 
     fn legal_moves_for(&self, i: usize) -> Vec<AmphipodMap> {
-        ManhattanDir::into_enum_iter()
+        all::<ManhattanDir>()
             .filter(|d| self.can_go(i, *d))
             .map(|d| {
                 let mut copy = self.clone();
