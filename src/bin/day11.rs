@@ -1,8 +1,8 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
 use std::io;
-use advent_code_lib::{advent_main, Position, RowMajorPositionIterator, search, map_width_height, ContinueSearch, GridDigitWorld};
-use bare_metal_modulo::{MNum, ModNumC};
+use advent_code_lib::{advent_main, Position, ContinueSearch, GridDigitWorld};
+use bare_metal_modulo::*;
 
 fn main() -> io::Result<()> {
     advent_main(&[], &["-show:num_steps"], |args| {
