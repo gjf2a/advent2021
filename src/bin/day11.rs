@@ -49,14 +49,12 @@ fn show_steps(mut octopi: DumboOctopi, steps: usize) {
 #[derive(Clone, Debug)]
 struct DumboOctopi {
     energies: GridDigitWorld,
-    width: usize,
-    height: usize
 }
 
 impl DumboOctopi {
     fn new(filename: &str) -> io::Result<DumboOctopi> {
         let energies = GridDigitWorld::from_digit_file(filename).unwrap();
-        Ok(DumboOctopi {energies, width: energies.width(), height: energies.height()})
+        Ok(DumboOctopi {energies})
     }
 
     fn just_flashed(&self) -> impl Iterator<Item=Position> + '_ {
