@@ -1,5 +1,5 @@
 use std::io;
-use advent_code_lib::{advent_main, Position, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch, SearchResult, AStarQueue, best_first_search, SearchQueue, AStarCost, AStarNode};
+use advent_code_lib::{advent_main, Position, map_width_height, RowMajorPositionIterator, ManhattanDir, DirType, ContinueSearch, SearchResult, AStarQueue, best_first_search, SearchQueue, AStarCost, AStarNode, GridDigitWorld};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{Display, Formatter};
 use bare_metal_modulo::{MNum, ModNumC};
@@ -38,7 +38,7 @@ struct Risk {
 }
 
 impl Risk {
-    fn from(risk: ModNumC<u32, 10>) -> Self {
+    fn from(risk: ModNumC<u8, 10>) -> Self {
         Risk {risk: ModNumC::new(risk.a() as u128 - 1)}
     }
 
@@ -56,7 +56,8 @@ struct RiskMap {
 
 impl RiskMap {
     fn new(filename: &str) -> io::Result<Self> {
-        Ok(Self::from(nums2map(filename)?.iter()
+        let grid = GridDigitWorld::from_digit_file(filename).unwrap();
+        Ok(Self::from(grid.position_value_iter()
             .map(|(p,r)| (*p, Risk::from(*r)))
             .collect()))
     }
@@ -70,7 +71,7 @@ impl RiskMap {
         let mut expanded_risks = self.risks.clone();
         for offset in RowMajorPositionIterator::new(expansion_factor, expansion_factor).skip(1) {
             let prev_dir = if offset.col == 0 {ManhattanDir::N} else {ManhattanDir::W};
-            let prev_offset = prev_dir.next(offset);
+            let prev_offset = prev_dir.next_position(offset);
             let prev_points = self.points_at(&prev_offset);
             for (old_point, new_point) in prev_points.zip(self.points_at(&offset)) {
                 expanded_risks.insert(new_point, expanded_risks.get(&old_point).unwrap().bumped());
