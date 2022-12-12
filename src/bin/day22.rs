@@ -277,7 +277,7 @@ mod tests {
         let cuboids = CUBOIDS_1.iter().map(|s| s.parse::<Cuboid>().unwrap()).collect_vec();
         let intersection = cuboids[0].intersection(&cuboids[1]);
         println!("Intersection: {}", intersection.unwrap());
-        let breaks = cuboids[0].break_out(&cuboids[1]).unwrap();
+        let breaks = cuboids[0].break_out(&cuboids[1]);
         for broken in breaks.iter() {
             println!("{}", broken);
         }
@@ -291,7 +291,7 @@ mod tests {
         let two = "x=9..11,y=9..11,z=9..11".parse::<Cuboid>().unwrap();
         let intersection = one.intersection(&two).unwrap();
         println!("Intersection: {}", intersection);
-        let broken = one.break_out(&two).unwrap();
+        let broken = one.break_out(&two);
         println!("Broken out:");
         for cuboid in broken {
             println!("{}", cuboid);
