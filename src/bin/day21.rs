@@ -256,6 +256,12 @@ impl DiracRoller {
 mod tests {
     use super::*;
 
+    impl Player {    
+        fn space_at(&self) -> u128 {
+            self.position.a() + 1
+        }
+    }
+
     #[test]
     fn test_example_part_1() {
         let mut game = part_1_game("ex/day21.txt").unwrap();
