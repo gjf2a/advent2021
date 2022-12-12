@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
 use std::io;
-use advent_code_lib::{advent_main, Position, ContinueSearch, GridDigitWorld};
+use advent_code_lib::{advent_main, Position, ContinueSearch, GridDigitWorld, search};
 use bare_metal_modulo::*;
 
 fn main() -> io::Result<()> {
