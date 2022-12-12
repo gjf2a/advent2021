@@ -122,10 +122,6 @@ impl Player {
         Player {position_sum: 0, moves: 0, position: line_num(start)}
     }
 
-    fn space_at(&self) -> u128 {
-        self.position.a() + 1
-    }
-
     fn total_score(&self) -> u128 {
         self.position_sum + self.moves
     }
