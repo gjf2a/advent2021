@@ -114,7 +114,7 @@ impl Scanner {
                 let candidate_offset = possibilities.get(&transform).unwrap();
                 if let Some(next_other) = other.offsets2triples.get(candidate_offset)
                     .and_then(|possibilities| possibilities.iter()
-                        .find(|(otransform, obeacon1, obeacon2)| otransform == other_transform && obeacon1 == current_other))
+                        .find(|(otransform, obeacon1, obeacon2)| *otransform == other_transform && *obeacon1 == current_other))
                     .map(|(_,_,next_other)| *next_other) {
 
                 }

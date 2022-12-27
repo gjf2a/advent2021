@@ -1,8 +1,8 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
 use std::io;
-use advent_code_lib::{advent_main, Position, RowMajorPositionIterator, search, nums2map, map_width_height, ContinueSearch};
-use bare_metal_modulo::{MNum, ModNumC};
+use advent_code_lib::{advent_main, Position, ContinueSearch, GridDigitWorld, search};
+use bare_metal_modulo::*;
 
 fn main() -> io::Result<()> {
     advent_main(&[], &["-show:num_steps"], |args| {
@@ -48,34 +48,31 @@ fn show_steps(mut octopi: DumboOctopi, steps: usize) {
 
 #[derive(Clone, Debug)]
 struct DumboOctopi {
-    energies: HashMap<Position, ModNumC<u32, 10> >,
-    width: usize,
-    height: usize
+    energies: GridDigitWorld,
 }
 
 impl DumboOctopi {
     fn new(filename: &str) -> io::Result<DumboOctopi> {
-        let energies = nums2map(filename)?;
-        let (width, height) = map_width_height(&energies);
-        Ok(DumboOctopi {energies, width, height})
+        let energies = GridDigitWorld::from_digit_file(filename).unwrap();
+        Ok(DumboOctopi {energies})
     }
 
     fn just_flashed(&self) -> impl Iterator<Item=Position> + '_ {
-        self.energies.iter()
+        self.energies.position_value_iter()
             .filter(|(_, energy)| **energy == 0)
             .map(|(p, _)| *p)
     }
 
     fn enqueue_flashed_neighbors(&mut self, flasher: Position, queue: &mut VecDeque<Position>) {
         for neighbor in flasher.neighbors() {
-            if let Some(neighbor_energy) = self.energies.get_mut(&neighbor) {
+            self.energies.modify(neighbor, |neighbor_energy| {
                 if *neighbor_energy > 0 {
                     *neighbor_energy += 1;
                     if *neighbor_energy == 0 {
                         queue.push_back(neighbor);
                     }
                 }
-            }
+            });
         }
     }
 
@@ -88,7 +85,7 @@ impl Iterator for DumboOctopi {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        for (_, energy) in self.energies.iter_mut() {
+        for (_, energy) in self.energies.position_value_iter_mut() {
             *energy += 1;
         }
 
@@ -102,9 +99,9 @@ impl Iterator for DumboOctopi {
 
 impl Display for DumboOctopi {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for p in RowMajorPositionIterator::new(self.width, self.height) {
+        for p in self.energies.position_iter() {
             if p.col == 0 && p.row > 0 {writeln!(f)?;}
-            write!(f, "{}", self.energies.get(&p).unwrap().a())?
+            write!(f, "{}", self.energies.value(p).unwrap().a())?
         }
         Ok(())
     }
