@@ -1,4 +1,208 @@
-use std::cmp::{max, min};
+use std::{fmt::Display, iter::repeat, collections::HashMap};
+
+use advent_code_lib::{all_lines, simpler_main};
+use bare_metal_modulo::*;
+use enum_iterator::{all, Sequence};
+
+/*
+Dynamic programming recurrence
+Cost(starting position) = 0
+Cost(P) = min(each previous P produced by one move)
+Build bottom-up to ensure minimum cost
+ */
+
+pub type EnergyCost = u128;
+
+const NUM_AMPHIPOD_TYPES: usize = 4;
+const AMPHIPODS_PER_TYPE: usize = 2;
+const TOTAL_AMPHIPODS: usize = AMPHIPODS_PER_TYPE * NUM_AMPHIPOD_TYPES;
+const HALLWAY_LEN: usize = 11;
+
+fn main() -> anyhow::Result<()> {
+    simpler_main(|filename| {
+        println!("Part 1: {}", part1(filename)?);
+        Ok(())
+    })
+}
+
+pub fn part1(filename: &str) -> anyhow::Result<EnergyCost> {
+    let map = AmphipodMap::from_file(filename)?;
+    println!("{map}");
+    Ok(map.lower_bound_to_goal())
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Ord, PartialOrd)]
+pub struct AmphipodNode {
+    energy_cost: EnergyCost,
+    map: AmphipodMap,
+}
+
+impl AmphipodNode {
+    pub fn start(start_map: AmphipodMap) -> Self {
+        AmphipodNode { energy_cost: 0, map: start_map }
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default, Ord, PartialOrd)]
+pub struct AmphipodMap {
+    amphipods: [(Amphipod,AmphipodPos); TOTAL_AMPHIPODS]
+}
+
+fn diff_u8(a: u8, b: u8) -> u8 {
+    if a > b {
+        a - b
+    } else {
+        b - a
+    }
+}
+
+impl AmphipodMap {
+    pub fn from_file(filename: &str) -> anyhow::Result<Self> {
+        let mut lines = all_lines(filename)?;
+        let mut rows = vec![];
+        lines.next(); 
+        lines.next();
+        rows.push(amphipods_from(lines.next().unwrap().as_str()));
+        rows.push(amphipods_from(lines.next().unwrap().as_str()));
+        let mut result = Self::default();
+        for (j, rp_j) in all::<RoomPosition>().enumerate() {
+            for (i, amp_i) in all::<Amphipod>().enumerate() {
+                let k = i + NUM_AMPHIPOD_TYPES * j;
+                let pos = AmphipodPos::SideRoom(amp_i, rp_j);
+                result.amphipods[k] = (rows[j][i], pos);
+            }
+        }
+        Ok(result)
+    }
+
+    fn pos2amp(&self) -> HashMap<AmphipodPos,Amphipod> {
+        let mut result = HashMap::new();
+        for (amp, pos) in self.amphipods.iter() {
+            result.insert(*pos, *amp);
+        }
+        result
+    }
+
+    fn at_goal(&self) -> bool {
+        self.amphipods.iter().all(|(amp, pos)| pos.in_room(*amp))
+    }
+
+    fn side_room_entrance(&self, room: Amphipod) -> u8 {
+        room as u8 * 2 + 2
+    }
+
+    fn cost_to_goal(&self, goal: Amphipod, pos: AmphipodPos) -> EnergyCost {
+        if pos.in_room(goal) {
+            0
+        } else {
+            let goal_entrance = self.side_room_entrance(goal);
+            let distance = match pos {
+                AmphipodPos::Hallway(p) => 1 + diff_u8(p.a(), goal_entrance),
+                AmphipodPos::SideRoom(amp, rp) => {
+                    let extra = match rp {RoomPosition::Far => 1, _ => 0};
+                    extra + 2 + diff_u8(self.side_room_entrance(amp), goal_entrance)
+                },
+            };
+            distance as EnergyCost * goal.energy()
+        }
+    }
+
+    fn lower_bound_to_goal(&self) -> EnergyCost {
+        self.amphipods.iter().map(|(amp, pos)| self.cost_to_goal(*amp, *pos)).sum()
+    }
+}
+
+impl Display for AmphipodMap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let pos2amp = self.pos2amp();
+        write!(f, "{}\n", repeat('#').take(HALLWAY_LEN + 2).collect::<String>())?;
+        write!(f, "#")?;
+        for i in 0..HALLWAY_LEN {
+            write!(f, "{}", pos2amp.get(&AmphipodPos::Hallway(ModNumC::new(i as u8))).map_or('.', |amp| char::from(*amp)))?;
+        }
+        write!(f, "#\n###")?;
+        for amp in all::<Amphipod>() {
+            let pos = AmphipodPos::SideRoom(amp, RoomPosition::Close);
+            write!(f, "{}#", pos2amp.get(&pos).map_or('.', |amp| char::from(*amp)))?;
+        }
+        write!(f, "##\n  #")?;
+        for amp in all::<Amphipod>() {
+            let pos = AmphipodPos::SideRoom(amp, RoomPosition::Far);
+            write!(f, "{}#", pos2amp.get(&pos).map_or('.', |amp| char::from(*amp)))?;
+        }
+        write!(f, "\n  {}  ", repeat('#').take(HALLWAY_LEN - 2).collect::<String>())
+    }
+}
+
+fn amphipods_from(line: &str) -> Vec<Amphipod> {
+    line.chars().filter_map(|c| Amphipod::from(c)).collect()
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Ord, PartialOrd)]
+pub enum AmphipodPos {
+    Hallway(ModNumC<u8, HALLWAY_LEN>),
+    SideRoom(Amphipod,RoomPosition),
+}
+
+impl AmphipodPos {
+    pub fn in_room(&self, amp: Amphipod) -> bool {
+        match self {
+            Self::SideRoom(room, _) => *room == amp,
+            _ => false
+        }
+    }
+}
+
+impl Default for AmphipodPos {
+    fn default() -> Self {
+        Self::Hallway(ModNumC::default())
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Default, Sequence, PartialOrd, Ord)]
+pub enum RoomPosition {
+    #[default]
+    Close, 
+    Far
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default, Sequence, PartialOrd, Ord)]
+pub enum Amphipod {
+    #[default]
+    Amber, 
+    Bronze, 
+    Copper, 
+    Desert 
+}
+
+impl Amphipod {
+    pub fn from(c: char) -> Option<Self> {
+        match c {
+            'A' => Some(Self::Amber),
+            'B' => Some(Self::Bronze),
+            'C' => Some(Self::Copper),
+            'D' => Some(Self::Desert),
+            _ => None,
+        }
+    }
+
+    pub fn energy(&self) -> EnergyCost {
+        (10 as EnergyCost).pow(*self as u32)
+    }
+}
+
+impl From<Amphipod> for char {
+    fn from(value: Amphipod) -> Self {
+        match value {
+            Amphipod::Amber => 'A',
+            Amphipod::Bronze => 'B',
+            Amphipod::Copper => 'C',
+            Amphipod::Desert => 'D',
+        }
+    }
+}
+
+/*use std::cmp::{max, min};
 use std::fmt::{Display, Formatter};
 use std::io;
 use advent_code_lib::{advent_main, all_lines, AStarCost, AStarNode, best_first_search, ContinueSearch, DirType, make_io_error, ManhattanDir, SearchQueue};
@@ -270,3 +474,4 @@ mod tests {
         assert_eq!(map, map2);
     }
 }
+*/

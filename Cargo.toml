@@ -9,9 +9,10 @@ edition = "2021"
 num = "0.4"
 advent_code_lib = {git = "https://github.com/gjf2a/advent_code_lib"}
 bits = {git = "https://github.com/gjf2a/bits"}
-hash_histogram = "0.6"
-bare_metal_modulo = "0.11"
+hash_histogram = "0.7"
+bare_metal_modulo = "1"
 common_macros = "0.1"
 itertools = "0.10"
 ansi_term = "0.12"
-enum-iterator = "0.6"
+enum-iterator = "1.2"
+anyhow = "1"
